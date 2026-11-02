@@ -14,7 +14,9 @@ Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerek
 - **Bot gücü:** Kolay, Normal, Zor
 - **6 kategori:** Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür (+ etkinlik kategorisi Futbol)
 - **3 dil:** Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
-- **10 kişilik bot kadrosu:** Her karakterin sabit güçlü/zayıf kategorisi, futbol bilgisi ve saldırganlığı var; her oyunda ikisi rakip olur
+- **10 kişilik bot kadrosu:** Her karakterin sabit güçlü/zayıf kategorisi, futbol bilgisi ve saldırganlığı var; her oyunda 2–4 tanesi rakip olur
+- **Altın:** Doğru cevaplarla, bölge alarak ve botları izlerken cevap vererek kazanılır; ipucu, kule onarımı ve yedek kale için harcanır
+- **İzleme hızı:** Botların kendi düellolarını 1x, 2x veya 4x hızda izleyebilirsin
 - **411 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası; görülen sorular oyunlar arasında hatırlanır, tekrar azalır
 - **Harita görüntüleyici:** parmakla kaydırma, iki parmakla yakınlaştırma, sıra gelince otomatik odaklanma
 - **Sıra duyuruları:** "Sıra sende!", "Ayla saldırıyor" gibi ekran ortası mesajlar
@@ -85,10 +87,16 @@ node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
    - İkisi de bilirse tahmin sorusu karar verir. İkisi de bilemezse hiçbir şey değişmez.
 3. **Kale:** 3 kulesi vardır. Saldıran, kazandığı her düelloda bir kule yıkar ve kaybedene kadar devam eder. Kale düşerse sahibinin bütün toprakları saldırana geçer ve o oyuncu elenir.
 4. **Kazanan:** Savaş turlarının sonunda en yüksek puanlı oyuncu. Bölge 200, kale 1000 puan değerindedir.
+5. **Kule onarımı:** Yıkılan kuleler kalıcıdır; saldıran bir sonraki saldırısında kaldığı yerden devam eder. Savunan, kendi turunun başında bir kuleyi 40 altınla ya da bir sıralama bulmacasını doğru çözerek onarabilir (tur başına bir onarım).
+6. **Yedek kale:** 80 altınla kendi bölgelerinden birine yedek kale kurulabilir. Ana kale düşerse oyuncu elenmez: ana kale bölgesi saldırana geçer, yedek kale 2 kuleyle yeni ana kale olur.
+
+**Altın:** Oyuna 40 altınla başlanır. Kendi düellonda doğru cevap +10, botların düellosunu izlerken doğru cevap +15, yayılmada en yakın tahmin +10, bölge almak +10. İlk ipucu bedava, sonrakiler 30 altın.
+
+**Oyuncu sayısı:** Sen + 2–4 bot. Kaleler haritada birbirinden olabildiğince uzak bölgelere otomatik yerleşir. 4 ve üzeri oyuncuda yayılmada üçüncü sıradaki de 1 bölge seçer.
 
 Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıraya dizmek).
 
-**İpucu jokeri:** Oyun başına 3 hak, soru başına en fazla bir kez. Çoktan seçmelide iki yanlış şıkkı siler, tahminde cevabın bulunduğu aralığı gösterir, sıralamada ilk öğeyi yerleştirir.
+**İpucu jokeri:** İlki bedava, sonrakiler 30 altın; soru başına en fazla bir kez. Çoktan seçmelide iki yanlış şıkkı siler, tahminde cevabın bulunduğu aralığı gösterir, sıralamada ilk öğeyi yerleştirir.
 
 ## Tasarım kararları
 
@@ -108,8 +116,9 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [x] İpucu jokeri, seriler, kategori karnesi, sesler
 - [x] Uzak Doğu haritası ve haritaya özel sorular
 - [x] Bot kadrosu, sıra duyuruları, harita yakınlaştırma, yeni tasarım
+- [x] 2–4 rakip, izleme hızı, izlerken cevaplama, altın, kule onarımı, yedek kale
 - [ ] Soru bankasını büyütmek (şu an kategori başına ~45, hedef 100+)
 - [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak
-- [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda
+- [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda; düellodaki iki kişi dışındakiler izlerken cevap verip altın kazanır
 - [ ] Telefona uygulama olarak paketleme
 - [ ] Yeni haritalar (Dünya, Amerika, Orta Doğu, Afrika…) ve özel etkinlikler (Osmanlı, Fizik…)

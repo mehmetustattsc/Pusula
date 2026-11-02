@@ -1,7 +1,7 @@
 /* ===================== UI chrome ===================== */
 function renderLangs(){$('#langs').innerHTML=LANGS.map(l=>`<button data-l="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join('')}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(!b)return;lang=b.dataset.l;try{localStorage.setItem('pusula.lang',lang)}catch(_){}document.documentElement.lang=lang;refreshLang()});
-function refreshLang(){renderLangs();renderMute();renderPlayers();renderLegend();renderStatus();renderPhase();paint();if(ovRerender)ovRerender()}
+function refreshLang(){renderSpeed();renderLangs();renderMute();renderPlayers();renderLegend();renderStatus();renderPhase();paint();if(ovRerender)ovRerender()}
 function renderMute(){const b=$('#mute');b.setAttribute('aria-pressed',String(!muted));b.setAttribute('aria-label',muted?t('soundOff'):t('soundOn'));b.innerHTML=muted?ICON.off:ICON.on}
 $('#mute').onclick=()=>{toggleMute();sfx('tap')};
 
@@ -11,17 +11,19 @@ const ICON={
 };
 /* oyuncu avatarı: renkli daire içinde baş harf */
 const avatar=(pid,size='')=>{const p=G.players[pid];return `<span class="av ${size}" style="--c:${p.color}">${esc((pid===0?t('you'):p.name).charAt(0))}</span>`};
+const coin=()=>'<i class="coin" aria-hidden="true"></i>';
 const botAv=b=>`<span class="av" style="--c:${b.color}">${esc(b.name.charAt(0))}</span>`;
 
 function renderPlayers(){
   if(!G){$('#players').innerHTML='';return}
+  $('#players').style.setProperty('--n',G.players.length);
   $('#players').innerHTML=G.players.map((p,i)=>{
-    const c=G.regions[p.castle];const pips=[0,1,2].map(k=>`<i class="${c.owner===i&&k<c.towers?'':'down'}"></i>`).join('');
+    const c=G.regions[p.castle];const pips=[0,1,2].map(k=>`<i class="${c.owner===i&&k<c.towers?'':'down'}"></i>`).join('')+(p.backup>=0?'<i class="bk" title="+"></i>':'');
     const meta=p.human?`<span class="pips" title="${t('castle')}">${pips}</span>`
       :`<span class="sw"><b class="up" style="--k:${CAT[p.s].c}">${T(CAT[p.s].ab)}</b><b class="dn" style="--k:${CAT[p.w].c}">${T(CAT[p.w].ab)}</b></span><span class="pips">${pips}</span>`;
     return `<div class="pc${G.active===i?' active':''}${p.alive?'':' out'}" style="--c:${p.color}">
       <div class="nm">${avatar(i)}<span class="nmt">${esc(pname(i))}</span></div>
-      <div class="sc">${fmtN(score(i))}</div>
+      <div class="sc">${fmtN(score(i))}<span class="gold">${coin()}${fmtN(p.gold)}</span></div>
       <div class="meta">${p.alive?meta:t('out')}</div></div>`}).join('');
 }
 function renderLegend(){const used=G?[...new Set(G.regions.map(r=>r.cat))]:CATS;const cats=[...CATS,...EVENT_CATS].filter(c=>used.includes(c));
@@ -51,3 +53,7 @@ const dot=pid=>`<i style="--c:${G.players[pid].color}" title="${esc(pname(pid))}
 function resLine(pids,res){return `<div class="res">${pids.map(p=>`<span>${avatar(p,'sm')}${esc(pname(p))} <b class="${res[p]?'y':'n'}">${res[p]?t('correct'):t('wrong')}</b></span>`).join('')}</div>`}
 /* düello başlığı: iki avatar ve hedef bölge */
 function duelHead(a,d,ri){const R=G.regions[ri];return `<span class="vs">${avatar(a,'sm')}<span class="ar">→</span>${avatar(d,'sm')}</span><span class="tg">${esc(T(R.name))}${R.castle?' · '+t('castle'):''}</span>`}
+
+/* bot düellolarını izleme hızı düğmesi (haritanın sol üstünde) */
+function renderSpeed(){const b=$('#speed');if(b)b.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l8 7-8 7zM12 5l8 7-8 7z" fill="currentColor"/></svg>${watchSpeed}x`}
+$('#speed').onclick=()=>{setWatchSpeed(watchSpeed===1?2:watchSpeed===2?4:1);sfx('tap')};

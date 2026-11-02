@@ -106,8 +106,10 @@ function paint(now=performance.now()){
     const nm=T(r.name);ctx.strokeText(nm,cx,cy-16);ctx.fillText(nm,cx,cy-16);
     const k=CAT[r.cat];
     if(r.castle){drawCastle(cx+20,cy+20,17,r.owner>=0?G.players[r.owner].color:'#EBDDBC',r.towers);drawBadge(cx-20,cy+20,k)}
-    else{drawBadge(cx-24,cy+18,k);ctx.font='800 24px "Baloo 2","Nunito",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
+    else{if(G.players.some(p=>p.backup===i))drawFlag(cx+38,cy-4,G.players[r.owner].color);drawBadge(cx-24,cy+18,k);ctx.font='800 24px "Baloo 2","Nunito",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
   });
 }
+/* yedek kale işareti: küçük bayraklı kule */
+function drawFlag(x,y,col){ctx.save();ctx.translate(x,y);ctx.lineWidth=3;ctx.strokeStyle='#2B1748';ctx.fillStyle='#FFF8EC';ctx.beginPath();ctx.rect(-8,4,16,16);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(0,-16);ctx.stroke();ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(14,-11);ctx.lineTo(0,-6);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
 function drawBadge(x,y,k){ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=4;ctx.strokeStyle=k.c;ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.stroke();ctx.fillStyle=k.c;ctx.font='900 14px "Nunito",system-ui,sans-serif';ctx.fillText(T(k.ab),x,y+1)}
 function redrawAll(){renderBase();paint();renderPlayers()}

@@ -1,35 +1,51 @@
 /* ===================== question flows =====================
  * askMC: çoktan seçmeli · askOrder: sıralama bulmacası · askEst: tahmin
- * Sen düellodaysan cevap verirsin; değilsen botların düellosunu izlersin.
- * İpucu (joker): oyun başına HINTS_PER_GAME hak, soru başına en fazla bir kez.
+ * Sen düellodaysan cevap verirsin. Değilsen botların düellosunu izlersin; çoktan seçmeli
+ * sorularda izlerken de cevap verebilirsin: doğruysa GOLD.watchCorrect altın (düelloyu etkilemez).
+ * İpucu (joker): oyun başında HINTS_PER_GAME bedava hak, sonra GOLD.hint altın. Soru başına bir kez.
  *   çoktan seçmeli → iki yanlış şık silinir · tahmin → cevabın bulunduğu aralık · sıralama → ilk öğe yerleşir
  */
 const HUMAN_MS={mc:15000,ord:25000,est:15000};
-const spec=ms=>ms*MODE().pace;   // izleme süreleri moda göre
-const hintBtn=()=>G.hints>0?`<button class="hintb" id="hint">${t('hint')} <span>${t('hintLeft',{n:G.hints})}</span></button>`:'';
-function useHint(fn){const b=$('#hint');if(!b)return;b.onclick=()=>{if(G.hints<=0)return;G.hints--;sfx('tap');b.remove();fn()}}
+const WATCH_MS={1:8000,2:4000};   // izlerken cevap verme süresi (hıza göre)
+const spec=ms=>ms*pace();          // izleme süreleri moda ve hıza göre
+const canHint=()=>G.hints>0||G.players[0].gold>=GOLD.hint;
+const hintBtn=()=>G.hints>0?`<button class="hintb" id="hint">${t('hint')} <span>${t('hintLeft',{n:G.hints})}</span></button>`
+  :`<button class="hintb" id="hint" ${canHint()?'':'disabled'}>${t('hint')} <span>${coin()}${GOLD.hint}</span></button>`;
+function useHint(fn){const b=$('#hint');if(!b)return;b.onclick=e=>{e.stopPropagation();if(!canHint())return;
+  if(G.hints>0)G.hints--;else addGold(0,-GOLD.hint);sfx('tap');b.remove();fn()}}
 function revealSfx(human,ok){if(human)sfx(ok?'ok':'no')}
+const watchable=()=>G.players[0].alive&&watchSpeed<4;
+/* izleme kartlarında hız düğmesi (karta dokunmak "geç" demek, bu düğme değil) */
+const speedPill=()=>`<button class="spd" id="spd">${t('speed')} ${watchSpeed}x</button>`;
+function bindSpeed(){const b=$('#spd');if(b)b.onclick=e=>{e.stopPropagation();setWatchSpeed(watchSpeed===1?2:watchSpeed===2?4:1);b.textContent=`${t('speed')} ${watchSpeed}x`;sfx('tap')}}
 
 async function askMC(q,pids,ctxHtml){
-  const human=pids.includes(0);
+  const human=pids.includes(0),watch=!human&&watchable();
   const opts=shuffle(q.a.map((a,i)=>({a,ok:i===0})));const okIdx=opts.findIndex(o=>o.ok);
   const bot={};pids.filter(p=>p!==0).forEach(p=>{const ok=Math.random()<accOf(p,q.c);let idx=okIdx;if(!ok){const w=[0,1,2,3].filter(i=>i!==okIdx);idx=w[Math.floor(Math.random()*3)]}bot[p]=idx});
   showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${ctxHtml}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div>
-   <div class="opts">${opts.map((o,i)=>`<button class="opt" data-i="${i}" ${human?'':'disabled'}><span class="l">${'ABCD'[i]}</span><span class="tx">${esc(T(o.a))}</span><span class="who"></span></button>`).join('')}</div>${human?hintBtn():''}<div id="foot"></div>`);
-  let hi=null;
+   ${watch?`<div class="bonus">${coin()}${t('watchHint',{n:GOLD.watchCorrect})}</div>`:''}
+   <div class="opts">${opts.map((o,i)=>`<button class="opt" data-i="${i}" ${human||watch?'':'disabled'}><span class="l">${'ABCD'[i]}</span><span class="tx">${esc(T(o.a))}</span><span class="who"></span></button>`).join('')}</div>
+   ${human?hintBtn():''}${!human?`<div class="row2 end">${speedPill()}</div>`:''}<div id="foot"></div>`);
+  bindSpeed();
+  let hi=null;const btns=[...card.querySelectorAll('.opt')];
+  const pickP=ms=>{const tm=timer(ms,$('#tb'));return Promise.race([tm.p,new Promise(res=>btns.forEach(b=>b.onclick=e=>{e.stopPropagation();hi=+b.dataset.i;b.classList.add('pick');sfx('tap');res()}))]).then(()=>tm.cancel())};
   if(human){
-    const btns=[...card.querySelectorAll('.opt')];
     useHint(()=>{shuffle([0,1,2,3].filter(i=>i!==okIdx)).slice(0,2).forEach(i=>{btns[i].disabled=true;btns[i].classList.add('gone')})});
-    if(AUTO){hi=Math.random()<.6?okIdx:Math.floor(Math.random()*4)}
-    else{const tm=timer(HUMAN_MS.mc,$('#tb'));await Promise.race([tm.p,new Promise(res=>btns.forEach(b=>b.onclick=()=>{hi=+b.dataset.i;b.classList.add('pick');res()}))]);tm.cancel()}
+    if(AUTO)hi=Math.random()<.6?okIdx:Math.floor(Math.random()*4);else await pickP(HUMAN_MS.mc);
+  }else if(watch){
+    if(AUTO)hi=Math.random()<.5?okIdx:null;else await pickP(WATCH_MS[watchSpeed]*MODE().pace);
   }else{const tm=timer(spec(1300)*SPEED,$('#tb'));await tm.p}
   const hb=$('#hint');if(hb)hb.remove();
-  card.querySelectorAll('.opt').forEach((b,i)=>{b.disabled=true;b.classList.remove('gone');if(i===okIdx)b.classList.add('ok');else if(i===hi)b.classList.add('no');
-    const w=pids.filter(p=>(p===0?hi:bot[p])===i);b.querySelector('.who').innerHTML=w.map(dot).join('')});
+  btns.forEach((b,i)=>{b.disabled=true;b.classList.remove('gone');if(i===okIdx)b.classList.add('ok');else if(i===hi)b.classList.add('no');
+    const w=pids.filter(p=>(p===0?hi:bot[p])===i);b.querySelector('.who').innerHTML=w.map(dot).join('')+(watch&&hi===i?dot(0):'')});
   const res={};pids.forEach(p=>res[p]=p===0?hi===okIdx:bot[p]===okIdx);
-  if(human){record(q.c,res[0]);revealSfx(true,res[0])}
-  $('#foot').innerHTML=(human&&hi==null?`<div class="hint">${t('timeout')}</div>`:'')+resLine(pids,res)+`<div class="hint">${t('tapSkip')}</div>`;
-  await waitOrTap(human?2600:spec(1600));return res;
+  if(human){record(q.c,res[0]);revealSfx(true,res[0]);if(res[0])addGold(0,GOLD.ownCorrect,true)}
+  pids.filter(p=>p!==0&&res[p]).forEach(p=>addGold(p,GOLD.ownCorrect));
+  let extra='';
+  if(watch&&hi!=null){const ok=hi===okIdx;record(q.c,ok);revealSfx(true,ok);if(ok)addGold(0,GOLD.watchCorrect,true);extra=`<div class="bonus ${ok?'won':'lost'}">${ok?t('watchWin',{n:GOLD.watchCorrect}):t('watchLose')}</div>`}
+  $('#foot').innerHTML=(human&&hi==null?`<div class="hint">${t('timeout')}</div>`:'')+extra+resLine(pids,res)+`<div class="hint">${t('tapSkip')}</div>`;
+  await waitOrTap(human?2600:spec(watch&&hi!=null?2200:1600));return res;
 }
 
 /* Sıralama: öğelere sırayla dokun → numara alır. Numaralı öğeye tekrar dokunursan geri alınır
@@ -40,7 +56,8 @@ async function askOrder(q,pids,ctxHtml){
   showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${ctxHtml}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div>
    <div class="hint" style="text-align:left">${t('order')} · ${human?t('orderHint'):''}</div>
    <div class="ord">${items.map((o,k)=>`<button class="oi" data-k="${k}" ${human?'':'disabled'}><span class="n"></span><span class="ot">${esc(T(o.it))}</span></button>`).join('')}</div>
-   ${human?`<div class="row2"><button class="ghost" id="undo">${t('undo')}</button><button class="ghost" id="rs">${t('reset')}</button>${hintBtn()}<button class="cta sm" id="ok" disabled>${t('confirm')}</button></div>`:''}<div id="foot"></div>`);
+   ${!human?`<div class="row2 end">${speedPill()}</div>`:''}${human?`<div class="row2"><button class="ghost" id="undo">${t('undo')}</button><button class="ghost" id="rs">${t('reset')}</button>${hintBtn()}<button class="cta sm" id="ok" disabled>${t('confirm')}</button></div>`:''}<div id="foot"></div>`);
+  bindSpeed();
   let seq=[],locked=-1;
   if(human){
     const btns=[...card.querySelectorAll('.oi')],okB=$('#ok');
@@ -60,7 +77,8 @@ async function askOrder(q,pids,ctxHtml){
   }else{const tm=timer(spec(1500)*SPEED,$('#tb'));await tm.p}
   card.querySelectorAll('.oi').forEach(b=>{const k=+b.dataset.k;b.disabled=true;b.querySelector('.n').textContent=items[k].i+1;b.classList.add('set');if(human)b.classList.add(seq.indexOf(k)===items[k].i?'ok':'no')});
   const r2=card.querySelector('.row2');if(r2)r2.remove();
-  if(human){record(q.c,res[0]);revealSfx(true,res[0])}
+  if(human){record(q.c,res[0]);revealSfx(true,res[0]);if(res[0]&&pids.length>1)addGold(0,GOLD.ownCorrect,true)}
+  if(pids.length>1)pids.filter(p=>p!==0&&res[p]).forEach(p=>addGold(p,GOLD.ownCorrect));
   $('#foot').innerHTML=resLine(pids,res)+`<div class="hint">${t('tapSkip')}</div>`;
   await waitOrTap(human?3000:spec(1800));return res;
 }

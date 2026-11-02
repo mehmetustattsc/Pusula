@@ -10,9 +10,9 @@ async function pickRegion(pid,left,first){
   if(pid===0){setStatus(()=>[left>1?t('pick2'):t('pick1'),t('pickHint')]);setHL(allowed);focusOn(allowed);
     if(first)await banner(t('bYourPick'),left>1?t('pick2'):t('pick1'),YOU_COLOR,1000,true);
     r=await waitRegionTap(allowed);sfx('tap')}
-  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);setHL(allowed);await sleep(550*MODE().pace);
+  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);setHL(allowed);await sleep(550*pace());
     const P=G.players[pid];r=allowed.map(i=>({i,s:P.p[G.regions[i].cat]+ADJ[i].filter(n=>G.regions[n].owner<0).length*.04+Math.random()*.25})).sort((a,b)=>b.s-a.s)[0].i;
-    setHL([],r);await sleep(400*MODE().pace)}
+    setHL([],r);await sleep(400*pace())}
   G.regions[r].owner=pid;clearHL();redrawAll();flashRegion(r,G.players[pid].color);toast(t('picked',{p:pname(pid),r:rn(r)}));
 }
 
@@ -27,34 +27,96 @@ async function duel(a,d,ri){
 /* senin açından sonucun sesi: aldıysan/savunduysan sevinç, kaybettiysen hüzün */
 function outcomeSfx(a,d,o){if(a!==0&&d!==0)return;const good=(o==='att'&&a===0)||(o==='def'&&d===0);if(o!=='none')sfx(good?'take':'lose')}
 
+/* ---------- tur öncesi hamleler: kule onarımı ve yedek kale ----------
+ * Yıkılan kuleler kalıcıdır; saldıran bir sonraki saldırısında kaldığı yerden devam eder.
+ * Savunan, kendi turunun başında bir kuleyi onarabilir: GOLD.repair altınla ya da bir sıralama
+ * bulmacasını doğru çözerek (bedava). Tur başına bir onarım.
+ * Yedek kale (GOLD.backup altın): ana kale düşerse oyuncu elenmez; yedek kale 2 kuleyle ana kale olur.
+ */
+const myCastle=pid=>G.regions[G.players[pid].castle];
+const backupSpots=pid=>owned(pid).filter(i=>!G.regions[i].castle&&i!==G.players[pid].backup);
+function canBuild(pid){const P=G.players[pid];return P.backup<0&&P.gold>=GOLD.backup&&backupSpots(pid).length>0}
+async function repairByPuzzle(pid){
+  const R=myCastle(pid);const ords=pools.ord.filter(q=>!EVENT_CATS.includes(q.c)||q.c===MODE().event);const q=draw(ords);
+  const ctxH=`<span class="tg">${t('repairCtx',{r:rn(G.players[pid].castle)})}</span>`;
+  const res=await askOrder(q,[pid],ctxH);hideCard();
+  if(res[pid]){R.towers=Math.min(3,R.towers+1);redrawAll();toast(t('repaired',{p:pname(pid),n:R.towers}));sfx(pid===0?'take':'tap')}
+  else toast(t('repairFail'));
+}
+function repairByGold(pid){const R=myCastle(pid);addGold(pid,-GOLD.repair);R.towers=Math.min(3,R.towers+1);redrawAll();flashRegion(G.players[pid].castle,G.players[pid].color);toast(t('repaired',{p:pname(pid),n:R.towers}))}
+async function buildBackup(pid,ri){const P=G.players[pid];addGold(pid,-GOLD.backup);P.backup=ri;redrawAll();flashRegion(ri,P.color);toast(t('backupBuilt',{p:pname(pid),r:rn(ri)}));if(pid!==0)await sleep(700*pace())}
+
+async function preTurn(pid){
+  const P=G.players[pid],R=myCastle(pid),hurt=R.towers<3;
+  if(pid===0){
+    if(!hurt&&!canBuild(0))return;
+    if(AUTO){if(hurt&&P.gold>=GOLD.repair)repairByGold(0);return}
+    const choice=await new Promise(res=>{
+      showCard(`<div class="acth"><span class="chip" style="--k:${YOU_COLOR}">${t('prepL')}</span><span class="gold big">${coin()}${fmtN(P.gold)}</span></div>
+        <div class="qt">${hurt?t('castleHurt',{n:R.towers}):t('prepTitle')}</div>
+        <div class="acts">
+          ${hurt?`<button class="act" data-a="gold" ${P.gold>=GOLD.repair?'':'disabled'}><b>${t('repairGold')}</b><small>${coin()}${GOLD.repair}</small></button>
+          <button class="act" data-a="puzzle"><b>${t('repairPuzzle')}</b><small>${t('repairPuzzleSub')}</small></button>`:''}
+          ${P.backup<0?`<button class="act" data-a="backup" ${canBuild(0)?'':'disabled'}><b>${t('buildBackup')}</b><small>${coin()}${GOLD.backup} · ${t('buildBackupSub')}</small></button>`:''}
+        </div>
+        <button class="cta" data-a="skip">${t('toAttack')}</button>`);
+      card.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{sfx('tap');res(b.dataset.a)})});
+    hideCard();
+    if(choice==='gold')repairByGold(0);
+    else if(choice==='puzzle')await repairByPuzzle(0);
+    else if(choice==='backup'){const spots=backupSpots(0);setStatus(()=>[t('pickBackup'),'']);setHL(spots);focusOn(spots);const r=await waitRegionTap(spots);clearHL();await buildBackup(0,r)}
+    return;
+  }
+  /* bot: hasarlıysa önce altınla, yoksa bulmacayla onarır; tehlikedeyse ya da zenginse yedek kale kurar */
+  if(hurt){if(P.gold>=GOLD.repair)repairByGold(pid);else if(Math.random()<.6)await repairByPuzzle(pid);await sleep(400*pace())}
+  if(canBuild(pid)&&(R.towers<3||P.gold>=GOLD.backup+40||Math.random()<.35)){
+    const spot=backupSpots(pid).map(i=>({i,s:-ADJ[i].filter(n=>G.regions[n].owner>=0&&G.regions[n].owner!==pid).length+Math.random()*.5})).sort((x,y)=>y.s-x.s)[0].i;
+    await buildBackup(pid,spot)}
+}
+
+/* ana kale düştü: yedek kale varsa oraya taşınır, yoksa oyuncu elenir ve toprakları saldırana geçer */
+async function castleFalls(a,d,ri){
+  const R=G.regions[ri],D=G.players[d];R.castle=false;R.towers=0;R.owner=a;
+  if(D.backup>=0&&G.regions[D.backup].owner===d){
+    const B=G.regions[D.backup];B.castle=true;B.towers=2;B.value=Math.max(B.value,800);D.castle=D.backup;D.backup=-1;
+    redrawAll();flashRegion(D.castle,D.color);
+    await banner(t('bFell',{d:pname(d)}),t('movedSub',{r:rn(D.castle)}),D.color,1500,d===0);
+  }else{
+    G.regions.forEach(x=>{if(x.owner===d)x.owner=a});D.alive=false;D.backup=-1;redrawAll();flashRegion(ri,G.players[a].color);
+    toast(t('fell',{a:pname(a),d:pname(d)}));setStatus(()=>[t('fell',{a:pname(a),d:pname(d)}),'']);await sleep(1600)}
+}
+
 async function attackTurn(pid){
-  setActive(pid);const tg=targetsFor(pid);
+  setActive(pid);
+  if(G.phase==='war')await preTurn(pid);
+  const tg=targetsFor(pid);
   if(!tg.length){setStatus(()=>[t('noTarget',{p:pname(pid)}),'']);await sleep(900);return}
   let ri;
   if(pid===0){setStatus(()=>[t('yourTurn'),t('attackHint')]);setHL(tg);focusOn(tg);
     await banner(t('bYourTurn'),t('attackHint'),YOU_COLOR,1200,true);
     ri=await waitRegionTap(tg);sfx('tap')}
-  else{setStatus(()=>[t('botTurn',{p:pname(pid)}),'']);setHL(tg);await sleep(500*MODE().pace);const P=G.players[pid];
+  else{setStatus(()=>[t('botTurn',{p:pname(pid)}),'']);setHL(tg);await sleep(500*pace());const P=G.players[pid];
     /* saldırgan botlar kalelere ve değerli bölgelere, temkinliler zayıf savunmalara yönelir */
     ri=tg.map(i=>{const R=G.regions[i];const da=accOf(R.owner,R.cat);let s=accOf(pid,R.cat)-da*(1.1-P.agg*.6)+R.value/2000*(.5+P.agg)+Math.random()*.25;if(R.castle)s+=(3-R.towers)*.25-.55+P.agg*.4;return{i,s}}).sort((x,y)=>y.s-x.s)[0].i}
   const R=G.regions[ri],d=R.owner;
   setHL([],ri);focusOn([ri],2);
+  const tw=R.castle?' · '+t('towersLeft',{n:R.towers}):'';
   if(pid!==0){const youDef=d===0;
-    await banner(t('bBotTurn',{p:pname(pid)}),youDef?t('bYouDefend',{r:rn(ri)}):t('bTarget',{r:rn(ri),d:pname(d)}),G.players[pid].color,youDef?1400:1000*MODE().pace,youDef)}
+    await banner(t('bBotTurn',{p:pname(pid)}),(youDef?t('bYouDefend',{r:rn(ri)}):t('bTarget',{r:rn(ri),d:pname(d)}))+tw,G.players[pid].color,youDef?1400:1000*pace(),youDef)}
+  else if(R.castle)await banner(t('bSiege',{d:pname(d)}),t('towersLeft',{n:R.towers}),YOU_COLOR,1000);
   else await sleep(300);
   if(R.castle){
     while(R.towers>0){const o=await duel(pid,d,ri);hideCard();outcomeSfx(pid,d,o);
-      if(o==='att'){R.towers--;redrawAll();flashRegion(ri,G.players[pid].color);if(R.towers>0){toast(t('tower',{r:rn(ri),n:R.towers}));await sleep(900)}}
+      if(o==='att'){R.towers--;redrawAll();flashRegion(ri,G.players[pid].color);if(R.towers>0){toast(t('tower',{r:rn(ri),n:R.towers}));await sleep(900*Math.min(1,pace()))}}
       else{if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:rn(ri)}))}else toast(t('none',{r:rn(ri)}));redrawAll();break}}
-    if(R.towers===0){G.regions.forEach(x=>{if(x.owner===d)x.owner=pid});R.castle=false;G.players[d].alive=false;redrawAll();flashRegion(ri,G.players[pid].color);
-      toast(t('fell',{a:pname(pid),d:pname(d)}));setStatus(()=>[t('fell',{a:pname(pid),d:pname(d)}),'']);await sleep(1600)}
+    if(R.towers===0)await castleFalls(pid,d,ri);
   }else{
     const o=await duel(pid,d,ri);hideCard();outcomeSfx(pid,d,o);
-    if(o==='att'){R.owner=pid;flashRegion(ri,G.players[pid].color);toast(t('took',{a:pname(pid),r:rn(ri)}))}
+    if(o==='att'){R.owner=pid;if(G.players[d].backup===ri)G.players[d].backup=-1;addGold(pid,GOLD.capture,true);flashRegion(ri,G.players[pid].color);toast(t('took',{a:pname(pid),r:rn(ri)}))}
     else if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:rn(ri)}))}else toast(t('none',{r:rn(ri)}));
     redrawAll();
   }
-  clearHL();await sleep(800*MODE().pace);
+  clearHL();await sleep(800*pace());
 }
 
 async function prepareMap(){
@@ -70,11 +132,14 @@ async function run(){
   G.phase='expand';
   while(freeR().length){G.round++;renderPhase();setActive(-1);setStatus(()=>[t('waitExpand'),'']);animateView({z:1,cx:W/2,cy:H/2});
     await banner(t('bExpand',{n:G.round}),t('bExpandSub'),'',1000);
-    const rk=await askEst(nextEst(MODE().event),alive(),t('est'),t('all'));hideCard();
-    for(const [pid,n] of [[rk[0],2],[rk[1],1]])for(let k=0;k<n;k++){if(!freeR().length)break;await pickRegion(pid,n-k,k===0)}
+    const rk=await askEst(nextEst(MODE().event),alive(),t('est'),t('all'));hideCard();addGold(rk[0],GOLD.estWin,true);
+    /* en yakın tahmin 2, ikinci 1 bölge; 4+ oyuncuda üçüncü de 1 bölge seçer */
+    const picks=[[rk[0],2],[rk[1],1]];if(rk.length>=4)picks.push([rk[2],1]);
+    for(const [pid,n] of picks)for(let k=0;k<n;k++){if(!freeR().length)break;await pickRegion(pid,n-k,k===0)}
   }
   G.phase='war';const WAR=MODE().war;await banner(t('bWar'),t('bWarSub',{n:WAR}),'',1300);
-  for(let rd=1;rd<=WAR;rd++){G.round=rd;renderPhase();const order=[0,1,2].map(k=>(k+rd-1)%3);
+  const NP=G.players.length;
+  for(let rd=1;rd<=WAR;rd++){G.round=rd;renderPhase();const order=[...Array(NP).keys()].map(k=>(k+rd-1)%NP);
     for(const pid of order){if(!G.players[0].alive||alive().length<2)break;if(G.players[pid].alive)await attackTurn(pid)}
     if(!G.players[0].alive||alive().length<2)break}
   if(my!==gameNo)return;
@@ -82,7 +147,7 @@ async function run(){
 }
 
 function showEnd(){
-  const rk=[0,1,2].sort((a,b)=>(G.players[b].alive-G.players[a].alive)||score(b)-score(a));
+  const rk=[...G.players.keys()].sort((a,b)=>(G.players[b].alive-G.players[a].alive)||score(b)-score(a));
   const won=G.players[0].alive&&rk[0]===0;sfx(won?'win':'lose');
   const cats=[...CATS,...EVENT_CATS].filter(c=>G.stats[c]);
   const draw=()=>{const head=!G.players[0].alive?t('youLost'):won?t('win'):t('lose',{p:pname(rk[0])});
@@ -104,14 +169,15 @@ function showStart(){
     <p class="qu">“${t('quote')}”<span>— Atatürk</span></p>
     <div class="setgrp"><div class="lt">${t('mapL')}</div>${seg('map',MAP_IDS.map(id=>[id,T(MAPS[id].name),t('regionsN',{n:MAPS[id].regions.length})]),SET.map)}</div>
     <div class="setgrp"><div class="lt">${t('modeL')}</div>${seg('mode',[['classic',t('mClassic'),t('mClassicD')],['quick',t('mQuick'),t('mQuickD')],['football',t('mFootball'),t('mFootballD')]],SET.mode)}</div>
-    <div class="setgrp"><div class="lt ltrow"><span>${t('oppL')}</span><button class="link" id="reroll">${t('reroll')}</button></div><div class="opps">${SET.opps.map(oppCard).join('')}</div></div>
+    <div class="setgrp"><div class="lt ltrow"><span>${t('oppL')}</span><button class="link" id="reroll">${t('reroll')}</button></div>${seg('nOpp',[['2','2'],['3','3'],['4','4']],String(SET.nOpp))}<div class="opps">${SET.opps.map(oppCard).join('')}</div></div>
     <div class="setgrp"><div class="lt">${t('diffL')}</div>${seg('diff',[['easy',t('dEasy')],['normal',t('dNormal')],['hard',t('dHard')]],SET.diff)}</div>
     <button class="cta big" id="go">${t('start')}</button>
-    <details class="how"><summary>${t('how')}</summary><ol class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li><li>${t('r5')}</li><li>${t('r6',{n:HINTS_PER_GAME})}</li></ol></details>`);
-    card.querySelectorAll('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{SET[g.dataset.seg]=b.dataset.v;saveSet();sfx('tap');
+    <details class="how"><summary>${t('how')}</summary><ol class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li><li>${t('r5')}</li><li>${t('r6',{n:HINTS_PER_GAME,g:GOLD.hint})}</li><li>${t('r7',{w:GOLD.watchCorrect,o:GOLD.ownCorrect})}</li><li>${t('r8',{r:GOLD.repair,b:GOLD.backup})}</li></ol></details>`);
+    card.querySelectorAll('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=g.dataset.seg;SET[k]=k==='nOpp'?+b.dataset.v:b.dataset.v;sfx('tap');
       g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b)));
-      if(g.dataset.seg==='map')previewMap()}));
-    $('#reroll').onclick=()=>{sfx('tap');let n;do{n=pickOpps()}while(n.join()===SET.opps.join());SET.opps=n;saveSet();card.querySelector('.opps').innerHTML=SET.opps.map(oppCard).join('');previewMap()};
+      if(k==='nOpp'){SET.opps=pickOpps(SET.nOpp);card.querySelector('.opps').innerHTML=SET.opps.map(oppCard).join('')}
+      saveSet();if(k==='map'||k==='nOpp')previewMap()}));
+    $('#reroll').onclick=()=>{sfx('tap');let n,k=0;do{n=pickOpps(SET.nOpp)}while(n.join()===SET.opps.join()&&++k<20);SET.opps=n;saveSet();card.querySelector('.opps').innerHTML=SET.opps.map(oppCard).join('');previewMap()};
     $('#go').onclick=()=>{sfx('tap');hideCard();run()}};
   ovRerender=draw;draw();
 }
@@ -120,7 +186,7 @@ async function previewMap(){await prepareMap();newGame();redrawAll();renderLegen
 
 /* ===================== boot ===================== */
 document.documentElement.lang=lang;
-renderLangs();renderMute();
+renderLangs();renderMute();renderSpeed();
 buildMap(SET.map);newGame();renderLegend();renderPhase();resetView();
 document.fonts.load('800 30px "Nunito"').catch(()=>{}).then(()=>document.fonts.ready).then(()=>{paint()});
 redrawAll();
