@@ -16,3 +16,11 @@ html = html.replace(/<script src="(?!https?:)([^"]+)"><\/script>/g, (_, src) =>
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'pusula.html'), html);
 console.log(`dist/pusula.html yazıldı (${(Buffer.byteLength(html) / 1024).toFixed(0)} KB)`);
+
+// Gömülebilir sürüm (doctype/html/head/body etiketleri olmadan) — Claude artifact sayfası gibi
+// kendi iskeletini ekleyen ortamlar için: dist/pusula-embed.html
+const head = html.slice(html.indexOf('<head>') + 6, html.indexOf('</head>'))
+  .replace(/<meta charset[^>]*>\s*/i, '').replace(/<meta name="viewport"[^>]*>\s*/i, '');
+const body = html.slice(html.indexOf('<body>') + 6, html.lastIndexOf('</body>'));
+fs.writeFileSync(path.join(root, 'dist', 'pusula-embed.html'), head.trim() + '\n' + body.trim() + '\n');
+console.log('dist/pusula-embed.html yazıldı');

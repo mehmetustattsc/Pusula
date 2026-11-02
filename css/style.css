@@ -115,7 +115,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:r}
 .rules li{display:grid;grid-template-columns:26px 1fr;gap:8px;font-size:.9rem;counter-increment:r}
 .rules li::before{content:counter(r);font-family:var(--mono);font-size:.75rem;color:var(--gold);border:1px solid #3a3320;border-radius:6px;height:22px;display:grid;place-items:center}
-.cardtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.cardtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap-reverse}
+.cardtop .hero{min-width:0;flex:1 1 240px}
 .endt{font-family:var(--display);font-stretch:118%;font-weight:900;font-size:1.8rem;line-height:1.05}
 /* sound toggle */
 .mute{background:none;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:.74rem;color:var(--muted)}
