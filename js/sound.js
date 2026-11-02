@@ -17,7 +17,8 @@ const SFX={
   take:()=>{tone(440,.1,'square',.05);tone(587,.1,'square',.05,.09);tone(784,.2,'square',.05,.18)},
   lose:()=>{tone(392,.15,'triangle',.08);tone(294,.25,'triangle',.08,.14)},
   win:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,.22,'triangle',.1,i*.12))},
-  tick:()=>tone(1200,.03,'square',.03)
+  tick:()=>tone(1200,.03,'square',.03),
+  turn:()=>{tone(784,.09,'triangle',.09);tone(1175,.16,'triangle',.09,.08)}
 };
 function sfx(k){SFX[k]&&SFX[k]()}
 function toggleMute(){muted=!muted;try{localStorage.setItem('pusula.mute',muted?'1':'0')}catch(e){}renderMute()}

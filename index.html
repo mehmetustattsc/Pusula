@@ -5,37 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pusula</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#2B1748">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800;900&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand">PUSULA<small id="sub">prototip</small></div>
-    <div class="phase" id="phase">—</div>
-    <button class="mute" id="mute" aria-pressed="true"></button>
-    <div class="langs" id="langs"></div>
+    <div class="brand"><span class="bmark" aria-hidden="true"></span>Pusula</div>
+    <div class="phase" id="phase"></div>
+    <div class="tools">
+      <button class="iconb" id="mute" aria-pressed="true"></button>
+      <div class="langs" id="langs"></div>
+    </div>
   </header>
   <section class="players" id="players"></section>
   <section class="board">
-    <div class="mapscroll" id="mapscroll"><canvas id="map"></canvas></div>
-    <button class="zoomb" id="zoomb"></button>
+    <div class="viewport" id="viewport"><canvas id="map"></canvas></div>
+    <div class="zoom" role="group">
+      <button id="zin" aria-label="+">+</button>
+      <button id="zout" aria-label="−">−</button>
+      <button id="zfit" aria-label="⤢"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
     <div class="toast" id="toast"></div>
   </section>
   <section class="status"><div class="m" id="sm"></div><div class="s" id="ss"></div></section>
   <section class="legend" id="legend"></section>
 </div>
+<div class="banner" id="banner" hidden></div>
 <div class="ov" id="ov" hidden><div class="card" id="card"></div></div>
 <script src="js/util.js"></script>
 <script src="js/i18n.js"></script>
 <script src="data/questions.js"></script>
 <script src="data/maps.js"></script>
+<script src="data/bots.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/questions.js"></script>
 <script src="js/map.js"></script>
 <script src="js/state.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/view.js"></script>
 <script src="js/ask.js"></script>
 <script src="js/game.js"></script>
 </body>

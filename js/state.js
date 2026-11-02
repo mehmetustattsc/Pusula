@@ -1,5 +1,5 @@
 /* ===================== state ===================== */
-const PCOL=['#2BB3C0','#E0565B','#9B7BEA'];
+const YOU_COLOR='#14B8A6';
 
 /* Oyun modları: war = savaş turu sayısı, event = bütün bölgeler bu özel kategoriden,
    pace = botların kendi aralarındaki düellolarda gösterim hızı (küçük = hızlı) */
@@ -12,8 +12,12 @@ const MODES={
 const DIFFS={easy:-.15,normal:0,hard:.12};
 const HINTS_PER_GAME=3;
 
-let SET={map:'tr',mode:'classic',diff:'normal'};
-try{const s=JSON.parse(localStorage.getItem('pusula.set')||'null');if(s&&MAPS[s.map]&&MODES[s.mode]&&s.diff in DIFFS)SET=s}catch(e){}
+/* iki rakip bot: renkleri birbirine ve sana çok benzemeyecek şekilde rastgele */
+const cdist=(a,b)=>{const x=hexRgb(a),y=hexRgb(b);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])};
+function pickOpps(){for(let k=0;k<200;k++){const [a,b]=shuffle(BOT_IDS);const A=BOTS.find(x=>x.id===a),B=BOTS.find(x=>x.id===b);if(cdist(A.color,B.color)>110&&cdist(A.color,YOU_COLOR)>110&&cdist(B.color,YOU_COLOR)>110)return[a,b]}return['ayla','kaan']}
+let SET={map:'tr',mode:'classic',diff:'normal',opps:null};
+try{const s=JSON.parse(localStorage.getItem('pusula.set')||'null');if(s&&MAPS[s.map]&&MODES[s.mode]&&s.diff in DIFFS)SET={...SET,...s}}catch(e){}
+if(!Array.isArray(SET.opps)||SET.opps.length!==2||!SET.opps.every(id=>BOT_IDS.includes(id)))SET.opps=pickOpps();
 function saveSet(){try{localStorage.setItem('pusula.set',JSON.stringify(SET))}catch(e){}}
 const MODE=()=>MODES[SET.mode];
 
@@ -23,9 +27,10 @@ function newGame(){
   const n=MAP.regions.length,ev=MODE().event;
   let cats=[];if(ev)cats=new Array(n).fill(ev);else{while(cats.length<n)cats.push(...shuffle(CATS));cats=shuffle(cats.slice(0,n))}
   const regions=MAP.regions.map((r,i)=>({name:r[0],cat:cats[i],owner:-1,value:200,castle:false,towers:0}));
-  const strong=shuffle(CATS);
-  const prof=k=>{const p={};CATS.forEach(c=>p[c]=rnd(.5,.68));EVENT_CATS.forEach(c=>p[c]=rnd(.45,.75));const s=strong[k*2],w=strong[k*2+1];p[s]=.84;p[w]=.34;return{p,s,w}};
-  const players=[{name:null,human:true,color:PCOL[0],alive:true},{name:'Ayla',color:PCOL[1],alive:true,...prof(0)},{name:'Kaan',color:PCOL[2],alive:true,...prof(1)}];
+  /* bot profili: güçlü kategori .84, zayıf .34, diğerleri .5–.68; futbol bilgisi karakterden */
+  const prof=b=>{const p={};CATS.forEach(c=>p[c]=rnd(.5,.68));p[b.s]=.84;p[b.w]=.34;EVENT_CATS.forEach(c=>p[c]=b.fb);return{p,s:b.s,w:b.w}};
+  const bot=id=>{const b=BOTS.find(x=>x.id===id);return{name:b.name,title:b.title,color:b.color,agg:b.agg,bot:id,alive:true,...prof(b)}};
+  const players=[{name:null,human:true,color:YOU_COLOR,alive:true},bot(SET.opps[0]),bot(SET.opps[1])];
   castles.forEach((ri,pid)=>{const r=regions[ri];r.owner=pid;r.castle=true;r.towers=3;r.value=1000;players[pid].castle=ri});
   G={players,regions,phase:'expand',round:0,active:-1,hints:HINTS_PER_GAME,streak:0,best:0,stats:{}};
 }

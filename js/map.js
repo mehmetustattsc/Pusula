@@ -54,12 +54,12 @@ function buildMap(id){
 const cv=$('#map'),ctx=cv.getContext('2d');
 const base=document.createElement('canvas'),bctx=base.getContext('2d');
 const hl=document.createElement('canvas'),hctx=hl.getContext('2d');
-function sizeCanvases(){[cv,base,hl].forEach(c=>{c.width=W;c.height=H})}
+function sizeCanvases(){[cv,base,hl].forEach(c=>{c.width=W;c.height=H});if(typeof layoutViewport==='function')layoutViewport()}
 let hlSet=new Set(),focus=-1,anim=0,flash=null;
 function renderBase(){
   const img=bctx.createImageData(W,H),d=img.data;
-  const cols=MAP.regions.map((r,i)=>hexRgb(G&&G.regions[i]&&G.regions[i].owner>=0?G.players[G.regions[i].owner].color:'#3B4458'));
-  const sea=[14,22,38],gr=[24,35,58],co=[36,54,90],bd=[7,11,19];
+  const cols=MAP.regions.map((r,i)=>hexRgb(G&&G.regions[i]&&G.regions[i].owner>=0?G.players[G.regions[i].owner].color:'#EBDDBC'));
+  const sea=[29,79,128],gr=[36,92,146],co=[86,140,190],bd=[43,23,72];
   for(let i=0,j=0;i<N;i++,j+=4){const r=rmap[i];let c;
     if(r<0){c=coast[i]?co:grid[i]?gr:sea;d[j]=c[0];d[j+1]=c[1];d[j+2]=c[2]}
     else{const x=i%W;const b=(x<W-1&&rmap[i+1]!==r)||(x>0&&rmap[i-1]!==r)||(i+W<N&&rmap[i+W]!==r)||(i>=W&&rmap[i-W]!==r);
@@ -67,11 +67,16 @@ function renderBase(){
     d[j+3]=255}
   bctx.putImageData(img,0,0);
 }
+/* vurgulama: seçilebilir bölgeler parlar, diğer kara parçaları kararır (dim), hedef bölge sarı */
+const dim=document.createElement('canvas'),dctx=dim.getContext('2d');
 function renderHL(){
-  hctx.clearRect(0,0,W,H);if(!hlSet.size&&focus<0)return;
-  const img=hctx.createImageData(W,H),d=img.data;
-  for(let i=0,j=0;i<N;i++,j+=4){const r=rmap[i];if(r<0)continue;if(r===focus){d[j]=255;d[j+1]=210;d[j+2]=90;d[j+3]=255}else if(hlSet.has(r)){d[j]=d[j+1]=d[j+2]=255;d[j+3]=255}}
-  hctx.putImageData(img,0,0);
+  hctx.clearRect(0,0,W,H);dim.width=W;dim.height=H;if(!hlSet.size&&focus<0)return;
+  const img=hctx.createImageData(W,H),d=img.data,im2=dctx.createImageData(W,H),e=im2.data;
+  for(let i=0,j=0;i<N;i++,j+=4){const r=rmap[i];if(r<0)continue;
+    if(r===focus){d[j]=255;d[j+1]=201;d[j+2]=60;d[j+3]=255}
+    else if(hlSet.has(r)){d[j]=d[j+1]=d[j+2]=255;d[j+3]=255}
+    else{e[j]=27;e[j+1]=12;e[j+2]=46;e[j+3]=125}}
+  hctx.putImageData(img,0,0);dctx.putImageData(im2,0,0);
 }
 function kick(){if(!anim)anim=requestAnimationFrame(frame)}
 function setHL(set,f=-1){hlSet=new Set(set);focus=f;renderHL();kick();paint()}
@@ -81,28 +86,28 @@ function flashRegion(i,color){if(reduced)return;flash={i,color,t0:performance.no
 function frame(now){paint(now);if(hlSet.size||focus>=0||(flash&&now-flash.t0<900))anim=requestAnimationFrame(frame);else{anim=0;flash=null;paint()}}
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function drawCastle(x,y,s,col,towers){
-  ctx.save();ctx.translate(x,y);ctx.fillStyle='#F3EEDF';ctx.strokeStyle='#070B13';ctx.lineWidth=3;
+  ctx.save();ctx.translate(x,y);ctx.fillStyle='#FFF8EC';ctx.strokeStyle='#2B1748';ctx.lineWidth=3;
   ctx.beginPath();const w=s,h=s*.62;ctx.moveTo(-w,h);ctx.lineTo(-w,-h);
   const m=w*2/5;for(let k=0;k<5;k++){const x0=-w+k*m;if(k%2===0){ctx.lineTo(x0,-h-s*.32);ctx.lineTo(x0+m,-h-s*.32);ctx.lineTo(x0+m,-h)}else ctx.lineTo(x0+m,-h)}
   ctx.lineTo(w,h);ctx.closePath();ctx.fill();ctx.stroke();
   ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-s*.25,h);ctx.lineTo(-s*.25,0);ctx.arc(0,0,s*.25,Math.PI,0);ctx.lineTo(s*.25,h);ctx.closePath();ctx.fill();
-  for(let k=0;k<3;k++){ctx.fillStyle=k<towers?'#F2C14E':'#2a3248';ctx.fillRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3);ctx.strokeRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3)}
+  for(let k=0;k<3;k++){ctx.fillStyle=k<towers?'#FFC93C':'#8C7BA6';ctx.fillRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3);ctx.strokeRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3)}
   ctx.restore();
 }
 function paint(now=performance.now()){
   if(!MAP)return;
   ctx.clearRect(0,0,W,H);ctx.drawImage(base,0,0);
-  if(hlSet.size||focus>=0){ctx.globalAlpha=reduced?.3:.16+.2*(Math.sin(now/260)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
+  if(hlSet.size||focus>=0){ctx.drawImage(dim,0,0);ctx.globalAlpha=reduced?.35:.18+.27*(Math.sin(now/240)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
   if(!G)return;
   if(flash){const p=(now-flash.t0)/900;if(p<1){const {cx,cy}=REGINFO[flash.i];ctx.beginPath();ctx.arc(cx,cy,30+p*110,0,Math.PI*2);ctx.strokeStyle=flash.color;ctx.globalAlpha=1-p;ctx.lineWidth=8*(1-p)+2;ctx.stroke();ctx.globalAlpha=1}}
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
   G.regions.forEach((r,i)=>{const {cx,cy}=REGINFO[i];
-    ctx.font='600 27px "IBM Plex Sans",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(7,11,19,.85)';ctx.fillStyle='#fff';
+    ctx.font='800 28px "Nunito",system-ui,sans-serif';ctx.lineWidth=7;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';
     const nm=T(r.name);ctx.strokeText(nm,cx,cy-16);ctx.fillText(nm,cx,cy-16);
     const k=CAT[r.cat];
-    if(r.castle){drawCastle(cx+20,cy+20,17,r.owner>=0?G.players[r.owner].color:'#3B4458',r.towers);drawBadge(cx-20,cy+20,k)}
-    else{drawBadge(cx-24,cy+18,k);ctx.font='600 22px "IBM Plex Mono",ui-monospace,monospace';ctx.lineWidth=5;ctx.strokeStyle='rgba(7,11,19,.85)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
+    if(r.castle){drawCastle(cx+20,cy+20,17,r.owner>=0?G.players[r.owner].color:'#EBDDBC',r.towers);drawBadge(cx-20,cy+20,k)}
+    else{drawBadge(cx-24,cy+18,k);ctx.font='800 24px "Baloo 2","Nunito",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
   });
 }
-function drawBadge(x,y,k){ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.fillStyle='#0B111D';ctx.fill();ctx.lineWidth=3.5;ctx.strokeStyle=k.c;ctx.stroke();ctx.fillStyle=k.c;ctx.font='700 14px "IBM Plex Sans",system-ui,sans-serif';ctx.fillText(T(k.ab),x,y+1)}
+function drawBadge(x,y,k){ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=4;ctx.strokeStyle=k.c;ctx.stroke();ctx.lineWidth=2;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.stroke();ctx.fillStyle=k.c;ctx.font='900 14px "Nunito",system-ui,sans-serif';ctx.fillText(T(k.ab),x,y+1)}
 function redrawAll(){renderBase();paint();renderPlayers()}
