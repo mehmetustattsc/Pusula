@@ -46,12 +46,25 @@ for (const type of ['mc', 'est', 'ord']) {
   }
 }
 
+// "Biliyor muydun?" bilgileri: bilgi metni, soru ve 4 seçenek
+const { FACTS } = require(path.join(__dirname, '..', 'data', 'facts.js'));
+for (const f of FACTS) {
+  const w = f.id || 'fact?';
+  if (!f.id) errors.push('fact: id eksik'); else if (ids.has(f.id)) errors.push(`${f.id}: id tekrar ediyor`);
+  ids.add(f.id);
+  if (!CATS.includes(f.c)) errors.push(`${w}: bilinmeyen kategori '${f.c}'`);
+  text(f.f, `${w} bilgi`); text(f.q, `${w} soru`);
+  if (!Array.isArray(f.a) || f.a.length !== 4) errors.push(`${w}: tam 4 seçenek olmalı`);
+  else { f.a.forEach((a, i) => text(a, `${w} seçenek ${i + 1}`)); noDupes(f.a, w); }
+}
+
 console.log('Kategori       çoktan  tahmin  sıralama');
 for (const c of [...CATS, ...EVENT_CATS]) {
   const k = count[c] || { mc: 0, est: 0, ord: 0 };
   console.log(`${c.padEnd(14)} ${String(k.mc).padStart(6)}  ${String(k.est).padStart(6)}  ${String(k.ord).padStart(8)}`);
 }
-console.log(`Toplam: ${ids.size} soru`);
+console.log(`Bilgi kartı: ${FACTS.length}`);
+console.log(`Toplam: ${ids.size - FACTS.length} soru + ${FACTS.length} bilgi`);
 
 if (errors.length) {
   console.error(`\n${errors.length} hata:`);

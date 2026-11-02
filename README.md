@@ -17,6 +17,7 @@ Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerek
 - **10 kişilik bot kadrosu:** Her karakterin sabit güçlü/zayıf kategorisi, futbol bilgisi ve saldırganlığı var; her oyunda 2–4 tanesi rakip olur
 - **Altın:** Doğru cevaplarla, bölge alarak ve botları izlerken cevap vererek kazanılır; ipucu, kule onarımı ve yedek kale için harcanır
 - **İzleme hızı:** Botların kendi düellolarını 1x, 2x veya 4x hızda izleyebilirsin
+- **"Biliyor muydun?" kartları:** Beklerken ekranın altında 86 niş bilgiden biri belirir; gördüğün bilgi aynı oyunda soru olarak gelebilir, bilirsen +10 altın bonus. Oyun sonunda "Bu oyunda öğrendiklerin" listesi
 - **411 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası; görülen sorular oyunlar arasında hatırlanır, tekrar azalır
 - **Harita görüntüleyici:** parmakla kaydırma, iki parmakla yakınlaştırma, sıra gelince otomatik odaklanma
 - **Sıra duyuruları:** "Sıra sende!", "Ayla saldırıyor" gibi ekran ortası mesajlar
@@ -30,12 +31,14 @@ css/style.css         tasarım (renkler, yazı tipleri, yerleşim)
 data/questions.js     SORU BANKASI — yeni sorular buraya eklenir
 data/maps.js          HARİTALAR — kara sınırları, bölge merkezleri, kaleler, tema
 data/bots.js          BOT KADROSU — isim, ünvan, renk, güçlü/zayıf kategori, tarz
+data/facts.js         BİLGİ KARTLARI — "Biliyor muydun?" bilgileri, her biri bir soruyla
 js/util.js            küçük yardımcılar
 js/i18n.js            arayüz metinleri (tr/de/en)
 js/sound.js           kısa ses efektleri (dosyasız, Web Audio)
 js/questions.js       soru havuzu: tekrar etmeden soru seçme
 js/map.js             harita oluşturma, bölgeler, komşuluklar, çizim
 js/view.js            harita görüntüleyici: kaydırma, yakınlaştırma, odaklanma, dokunma
+js/facts.js           bilgi kartlarını gösterme ve öğrenilen bilgiden soru çıkarma
 js/state.js           ayarlar, modlar, oyun durumu, bot profilleri, puan
 js/ui.js              oyuncu kartları, durum satırı, harita dokunuşları
 js/ask.js             soru ekranları: çoktan seçmeli, tahmin, sıralama
@@ -72,6 +75,14 @@ Ekledikten sonra kontrol et:
 ```
 node tools/check-questions.js   # eksik dil, yanlış seçenek sayısı, tekrar eden id vb.
 node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
+```
+
+## Bilgi kartı eklemek
+
+`data/facts.js` içine bir satır: bilgi metni (`f`), o bilgiden bir soru (`q`) ve 4 seçenek (`a`, ilki doğru). Haritaya özelse `m` alanı eklenir. Bilgiler niş ama kesin doğru olmalı; tartışmalı olanlarda "anlatılır / söylenir" gibi ifadeler kullanılır. `node tools/check-questions.js` bilgileri de denetler.
+
+```js
+{id:"geo-fact-015",c:"geo",m:"tr",f:{tr:"…",de:"…",en:"…"},q:{tr:"…",de:"…",en:"…"},a:["Doğru","Yanlış","Yanlış","Yanlış"]},
 ```
 
 ## Harita eklemek
@@ -117,6 +128,8 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [x] Uzak Doğu haritası ve haritaya özel sorular
 - [x] Bot kadrosu, sıra duyuruları, harita yakınlaştırma, yeni tasarım
 - [x] 2–4 rakip, izleme hızı, izlerken cevaplama, altın, kule onarımı, yedek kale
+- [x] "Biliyor muydun?" bilgi kartları (86 bilgi), öğrenilen bilginin soru olarak dönmesi
+- [ ] Bilgi kartlarını büyütmek (hedef 300+, her harita için ayrı set)
 - [ ] Soru bankasını büyütmek (şu an kategori başına ~45, hedef 100+)
 - [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak
 - [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda; düellodaki iki kişi dışındakiler izlerken cevap verip altın kazanır

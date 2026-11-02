@@ -10,14 +10,14 @@ async function pickRegion(pid,left,first){
   if(pid===0){setStatus(()=>[left>1?t('pick2'):t('pick1'),t('pickHint')]);setHL(allowed);focusOn(allowed);
     if(first)await banner(t('bYourPick'),left>1?t('pick2'):t('pick1'),YOU_COLOR,1000,true);
     r=await waitRegionTap(allowed);sfx('tap')}
-  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);setHL(allowed);await sleep(550*pace());
+  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);showFact();setHL(allowed);await sleep(550*pace());
     const P=G.players[pid];r=allowed.map(i=>({i,s:P.p[G.regions[i].cat]+ADJ[i].filter(n=>G.regions[n].owner<0).length*.04+Math.random()*.25})).sort((a,b)=>b.s-a.s)[0].i;
     setHL([],r);await sleep(400*pace())}
   G.regions[r].owner=pid;clearHL();redrawAll();flashRegion(r,G.players[pid].color);toast(t('picked',{p:pname(pid),r:rn(r)}));
 }
 
 async function duel(a,d,ri){
-  const R=G.regions[ri];const q=nextDuel(R.cat);
+  const R=G.regions[ri];const q=(a===0||d===0)&&factQuestion(R.cat)||nextDuel(R.cat);
   const ctxH=duelHead(a,d,ri);
   const res=q.type==='ord'?await askOrder(q,[a,d],ctxH):await askMC(q,[a,d],ctxH);
   if(res[a]&&!res[d])return 'att';if(res[d]&&!res[a])return 'def';if(!res[a]&&!res[d])return 'none';
@@ -87,7 +87,7 @@ async function castleFalls(a,d,ri){
 }
 
 async function attackTurn(pid){
-  setActive(pid);
+  setActive(pid);if(pid!==0)showFact();
   if(G.phase==='war')await preTurn(pid);
   const tg=targetsFor(pid);
   if(!tg.length){setStatus(()=>[t('noTarget',{p:pname(pid)}),'']);await sleep(900);return}
@@ -143,7 +143,7 @@ async function run(){
     for(const pid of order){if(!G.players[0].alive||alive().length<2)break;if(G.players[pid].alive)await attackTurn(pid)}
     if(!G.players[0].alive||alive().length<2)break}
   if(my!==gameNo)return;
-  G.phase='end';setActive(-1);renderPhase();showEnd();
+  G.phase='end';setActive(-1);renderPhase();hideFact();showEnd();
 }
 
 function showEnd(){
@@ -155,6 +155,7 @@ function showEnd(){
      <div class="rows">${rk.map((p,k)=>`<div class="row${k===0?' first':''}" style="--c:${G.players[p].color}"><span class="rk">${k+1}</span><span class="who2">${avatar(p,'sm')}${esc(pname(p))}${G.players[p].alive?'':' · '+t('out')}</span><span class="g">${fmtN(score(p))}</span><span class="df">${t('score')}</span></div>`).join('')}</div>
      ${cats.length?`<div class="report"><div class="lt">${t('report')}</div>${cats.map(c=>{const s=G.stats[c];const pct=Math.round(s.r/s.t*100);return `<div class="rep"><span class="badge" style="--k:${CAT[c].c}">${T(CAT[c].ab)}</span><span class="rn">${T(CAT[c].n)}</span><span class="bar"><i style="width:${pct}%;background:${CAT[c].c}"></i></span><span class="rv">${s.r}/${s.t}</span></div>`}).join('')}
        ${G.best>=2?`<div class="hint" style="text-align:left">${t('bestStreak',{n:G.best})}</div>`:''}</div>`:''}
+     ${G.facts.length?`<details class="learned"><summary>${t('learned',{n:G.facts.length})}</summary><ul>${G.facts.map(id=>{const f=FACTS.find(x=>x.id===id);return `<li style="--k:${CAT[f.c].c}">${esc(T(f.f))}</li>`}).join('')}</ul></details>`:''}
      <div class="row2"><button class="cta" id="again">${t('again')}</button><button class="ghost" id="menu">${t('menu')}</button></div>`);
     $('#again').onclick=()=>{hideCard();run()};$('#menu').onclick=()=>showStart()};
   ovRerender=draw;draw();setStatus(()=>[t('final'),'']);

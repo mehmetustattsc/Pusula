@@ -12,7 +12,7 @@ const MODES={
 const DIFFS={easy:-.15,normal:0,hard:.12};
 const HINTS_PER_GAME=1;   // oyun başında bedava ipucu hakkı; sonrakiler altınla
 /* Altın ekonomisi: kazanma ve harcama miktarları */
-const GOLD={start:40,ownCorrect:10,watchCorrect:15,estWin:10,capture:10,hint:30,repair:40,backup:80};
+const GOLD={factBonus:10,start:40,ownCorrect:10,watchCorrect:15,estWin:10,capture:10,hint:30,repair:40,backup:80};
 /* Bot düellolarını izleme hızı: 1x, 2x, 4x (4x'te izlerken cevaplama yok) */
 let watchSpeed=1;try{const w=+localStorage.getItem('pusula.speed');if([1,2,4].includes(w))watchSpeed=w}catch(e){}
 function setWatchSpeed(v){watchSpeed=v;try{localStorage.setItem('pusula.speed',String(v))}catch(e){}if(typeof renderSpeed==='function')renderSpeed()}
@@ -43,7 +43,7 @@ function newGame(){
   const players=[{name:null,human:true,color:YOU_COLOR,alive:true},...SET.opps.map(bot)];
   players.forEach(p=>{p.gold=GOLD.start;p.backup=-1});
   placeCastles(players.length).forEach((ri,pid)=>{const r=regions[ri];r.owner=pid;r.castle=true;r.towers=3;r.value=1000;players[pid].castle=ri});
-  G={players,regions,phase:'expand',round:0,active:-1,hints:HINTS_PER_GAME,streak:0,best:0,stats:{}};
+  G={players,regions,phase:'expand',round:0,active:-1,hints:HINTS_PER_GAME,streak:0,best:0,stats:{},facts:[],factAsked:[]};
 }
 /* kaleleri birbirinden olabildiğince uzak bölgelere yerleştir (komşuluk grafiğinde en büyük en küçük mesafe) */
 function placeCastles(k){

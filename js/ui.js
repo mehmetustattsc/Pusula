@@ -38,7 +38,7 @@ let toastT;function toast(msg){const el=$('#toast');el.textContent=msg;el.classL
 async function banner(main,sub='',color='',ms=1150,you=false){
   const b=$('#banner');b.innerHTML=`<div class="bn${you?' you':''}" style="${color?`--c:${color}`:''}"><div class="bm">${esc(main)}</div>${sub?`<div class="bs">${esc(sub)}</div>`:''}</div>`;
   b.hidden=false;b.classList.remove('go');void b.offsetWidth;b.classList.add('go');
-  if(you)sfx('turn');
+  if(you){sfx('turn');hideFact()}
   await sleep(ms);b.hidden=true;
 }
 
