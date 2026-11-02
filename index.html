@@ -1,0 +1,595 @@
+<title>Pusula</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a war-room table — header, three player plaques, the map as the board, a status line, question cards rise as overlays */
+:root{
+  --bg:#0A0F1A; --panel:#121A2B; --panel2:#18223A; --line:#26324C;
+  --fg:#E9EDF5; --muted:#8E9AB2; --gold:#F2C14E; --gold-ink:#1A1405;
+  --good:#46C489; --bad:#E5484D;
+  --you:#2BB3C0; --p1:#E0565B; --p2:#9B7BEA;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 28px;display:flex;flex-direction:column;gap:12px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:1.45rem;letter-spacing:.06em;line-height:1}
+.brand small{display:block;font-family:var(--body);font-stretch:100%;font-weight:500;font-size:.68rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.phase{margin-left:auto;font-family:var(--mono);font-size:.78rem;color:var(--gold);border:1px solid #3a3320;background:#1d1a10;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.langs{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.langs button{background:none;border:0;padding:5px 10px;font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.05em}
+.langs button[aria-pressed="true"]{background:var(--panel2);color:var(--fg)}
+
+.players{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pc{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;transition:box-shadow .2s,opacity .3s}
+.pc.active{box-shadow:0 0 0 2px var(--c) inset,0 0 18px -6px var(--c)}
+.pc.out{opacity:.4}
+.pc .nm{font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:6px;min-width:0}
+.pc .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc .sc{font-family:var(--mono);font-weight:600;font-size:1.25rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.pc .sc small{font-size:.65rem;color:var(--muted);font-weight:500;margin-left:3px}
+.pips{display:inline-flex;gap:3px}
+.pips i{width:8px;height:8px;border-radius:2px;background:var(--c)}
+.pips i.down{background:transparent;box-shadow:0 0 0 1px #4a5570 inset}
+.pc .meta{font-size:.68rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+.pc .meta b{color:var(--fg);font-weight:600}
+
+.board{position:relative;background:#0E1626;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mapscroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.mapscroll canvas{display:block;width:100%;height:auto;touch-action:pan-x pan-y}
+.mapscroll.zoom canvas{min-width:640px}
+.zoomb{position:absolute;right:8px;bottom:8px;background:rgba(10,15,26,.85);border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:.72rem;color:var(--fg)}
+.toast{position:absolute;left:50%;top:10px;transform:translate(-50%,-8px);opacity:0;pointer-events:none;background:rgba(10,15,26,.92);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.82rem;font-weight:600;max-width:calc(100% - 24px);text-align:center;transition:opacity .25s,transform .25s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.status{display:flex;flex-direction:column;gap:2px;min-height:3.2em}
+.status .m{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:1.12rem;text-wrap:balance}
+.status .s{color:var(--muted);font-size:.88rem}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.78rem;color:var(--muted)}
+.legend .lt{text-transform:uppercase;letter-spacing:.1em;font-size:.66rem;width:100%}
+.badge{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#0B111D;box-shadow:0 0 0 2px var(--k) inset;color:var(--k);font-weight:700;font-size:.62rem;letter-spacing:0;flex:none}
+.lg{display:inline-flex;align-items:center;gap:6px;color:var(--fg)}
+
+/* overlays */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(4,7,13,.74);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow-y:auto}
+.card{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 24px 60px -20px #000;animation:rise .22s ease-out}
+@keyframes rise{from{transform:translateY(14px);opacity:.4}to{transform:none;opacity:1}}
+.qh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem}
+.chip{display:inline-flex;align-items:center;gap:6px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;font-size:.68rem;color:var(--k)}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--k)}
+.qh .ctx{margin-left:auto;color:var(--muted);font-weight:500}
+.ctx b{color:var(--fg)}
+.timer{height:4px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.timer i{display:block;height:100%;background:var(--gold);transform-origin:left;transition:none}
+.qt{font-size:1.18rem;font-weight:600;line-height:1.35;text-wrap:balance}
+.opts{display:grid;grid-template-columns:1fr;gap:8px}
+@media (min-width:560px){.opts{grid-template-columns:1fr 1fr}}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;min-height:52px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-weight:500}
+.opt:not(:disabled):hover{border-color:#3b4a6b}
+.opt:disabled{cursor:default}
+.opt .l{font-family:var(--mono);font-size:.75rem;color:var(--muted);flex:none}
+.opt .tx{flex:1;min-width:0}
+.opt .who{display:flex;gap:3px;flex:none}
+.opt .who i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--panel2)}
+.opt.ok{border-color:var(--good);background:#123325}
+.opt.no{border-color:var(--bad);background:#3a1518}
+.opt.pick{border-color:var(--gold)}
+.res{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.84rem}
+.res span{display:inline-flex;align-items:center;gap:6px}
+.res .d{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.res .y{color:var(--good);font-weight:600}.res .n{color:var(--bad);font-weight:600}
+.hint{font-size:.74rem;color:var(--muted);text-align:center}
+
+.disp{font-family:var(--mono);font-size:2rem;font-weight:600;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:3.2rem;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.disp .u{font-size:1rem;color:var(--muted);margin-left:6px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pad button{min-height:50px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:1.25rem;font-weight:600}
+.pad .go{background:var(--gold);color:var(--gold-ink);border-color:var(--gold);font-family:var(--body);font-size:.95rem;font-weight:700}
+.truth{text-align:center}
+.truth .v{font-family:var(--mono);font-size:2rem;font-weight:600;color:var(--gold)}
+.truth .lb{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:10px;align-items:center;background:var(--panel2);border-radius:8px;padding:8px 10px;border-left:3px solid var(--c);font-size:.9rem}
+.row .rk{font-family:var(--mono);color:var(--muted)}
+.row .g{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.row .df{font-family:var(--mono);font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.row.first{background:#1d2a20}
+
+.ord{display:flex;flex-direction:column;gap:6px}
+.oi{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;text-align:left;font-weight:500}
+.oi .n{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:.8rem;background:var(--bg);color:var(--muted);flex:none}
+.oi.set .n{background:var(--gold);color:var(--gold-ink)}
+.oi.ok{border-color:var(--good)}.oi.no{border-color:var(--bad)}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:.8rem;color:var(--muted);align-self:flex-start}
+
+.cta{background:var(--gold);color:var(--gold-ink);border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:1rem}
+.hero h1{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:2.4rem;letter-spacing:.05em;line-height:1;margin:0}
+.hero p{margin:6px 0 0;color:var(--muted)}
+.hero .qu{margin-top:12px;color:var(--gold);font-style:italic;font-size:.92rem;border-left:2px solid var(--gold);padding-left:10px}
+.hero .qu span{display:block;font-style:normal;font-size:.72rem;color:var(--muted);margin-top:2px;letter-spacing:.06em}
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:r}
+.rules li{display:grid;grid-template-columns:26px 1fr;gap:8px;font-size:.9rem;counter-increment:r}
+.rules li::before{content:counter(r);font-family:var(--mono);font-size:.75rem;color:var(--gold);border:1px solid #3a3320;border-radius:6px;height:22px;display:grid;place-items:center}
+.cardtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.endt{font-family:var(--display);font-stretch:118%;font-weight:900;font-size:1.8rem;line-height:1.05}
+@media (prefers-reduced-motion:reduce){.card{animation:none}.toast{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">PUSULA<small id="sub">prototip</small></div>
+    <div class="phase" id="phase">—</div>
+    <div class="langs" id="langs"></div>
+  </header>
+  <section class="players" id="players"></section>
+  <section class="board">
+    <div class="mapscroll" id="mapscroll"><canvas id="map"></canvas></div>
+    <button class="zoomb" id="zoomb"></button>
+    <div class="toast" id="toast"></div>
+  </section>
+  <section class="status"><div class="m" id="sm"></div><div class="s" id="ss"></div></section>
+  <section class="legend" id="legend"></section>
+</div>
+<div class="ov" id="ov" hidden><div class="card" id="card"></div></div>
+
+<script>
+/* ===================== i18n ===================== */
+const LANGS=['tr','de','en'];
+let lang='tr';
+try{const s=localStorage.getItem('pusula.lang');if(LANGS.includes(s))lang=s;else{const n=(navigator.language||'tr').slice(0,2);if(LANGS.includes(n))lang=n}}catch(e){}
+const LI=()=>LANGS.indexOf(lang);
+const T=x=>Array.isArray(x)?x[LI()]:x;
+const S={
+tr:{sub:'prototip',quote:'Hayatta en hakiki mürşit ilimdir.',tag:'Bil, seç, fethet. Türkiye haritasında iki bota karşı bilgi ve strateji.',
+r1:'Yayılma: Herkes aynı tahmin sorusunu cevaplar. En yakın tahmin 2, ikinci 1 bölge seçer.',
+r2:'Savaş: Sırayla komşu bir bölgeye saldırırsın. Soru o bölgenin kategorisinden gelir.',
+r3:'İkiniz de bilirseniz tahmin sorusu karar verir. Savunulan bölge +100 değer kazanır.',
+r4:'Kaleyi almak için 3 kulesini de yık. Düşen kalenin bütün toprakları senin olur.',
+r5:'Botların güçlü ve zayıf kategorilerine göre saldır. 4 savaş turundan sonra en yüksek puan kazanır.',
+start:'Oyuna başla',again:'Tekrar oyna',expand:'Yayılma',war:'Savaş',round:'Tur',you:'Sen',strong:'Güçlü',weak:'Zayıf',out:'Elendi',castle:'Kale',
+est:'Tahmin',tiebreak:'Eşitlik bozucu',duel:'Düello',order:'Sıralama bulmacası',send:'Gönder',reset:'Sıfırla',answer:'Doğru cevap',diff:'fark',noAnswer:'cevap yok',
+pick2:'İki bölge seç',pick1:'Bir bölge seç',pickHint:'Parlayan bölgelerden birine dokun.',botPick:'{p} bölge seçiyor…',picked:'{p} → {r}',
+yourTurn:'Saldırı sırası sende',attackHint:'Parlayan bir düşman bölgesine dokun. Kategoriye ve rakibin zayıf yanına bak.',botTurn:'{p} saldırıyor',
+took:'{a}, {r} bölgesini aldı',held:'{d}, {r} bölgesini savundu (+100)',none:'İkisi de bilemedi. {r} el değiştirmedi.',tie:'İkisi de bildi, tahmin karar verecek',
+tower:'{r} kalesinde bir kule yıkıldı. Kalan: {n}',fell:'{a}, {d} kalesini fethetti!',noTarget:'{p} saldıracak komşu bulamadı.',
+score:'puan',tapSkip:'Devam etmek için dokun',correct:'doğru',wrong:'yanlış',timeout:'Süre doldu',legend:'Bölge kategorileri · harfler haritadaki rozetlerdir',
+zoomIn:'Yakınlaştır',zoomOut:'Tümünü gör',youLost:'Kalen düştü.',win:'Kazandın!',lose:'{p} kazandı',all:'Herkes',orderHint:'Öğelere doğru sırayla dokun.',
+estHint:'En yakın tahmin kazanır. Eşitlikte hızlı olan önde.',waitExpand:'Tahmin sorusu geliyor…',final:'Son durum'},
+de:{sub:'Prototyp',quote:'Der wahrste Wegweiser im Leben ist das Wissen.',tag:'Wissen, wählen, erobern. Wissen und Strategie auf der Türkei-Karte gegen zwei Bots.',
+r1:'Ausbreitung: Alle beantworten dieselbe Schätzfrage. Die beste Schätzung wählt 2 Gebiete, die zweitbeste 1.',
+r2:'Krieg: Reihum greifst du ein Nachbargebiet an. Die Frage kommt aus der Kategorie dieses Gebiets.',
+r3:'Wissen es beide, entscheidet eine Schätzfrage. Ein verteidigtes Gebiet gewinnt +100 Wert.',
+r4:'Für eine Burg musst du alle 3 Türme zerstören. Dann gehört dir das ganze Land des Gegners.',
+r5:'Greif dort an, wo die Bots schwach sind. Nach 4 Kriegsrunden gewinnt die höchste Punktzahl.',
+start:'Spiel starten',again:'Nochmal spielen',expand:'Ausbreitung',war:'Krieg',round:'Runde',you:'Du',strong:'Stark',weak:'Schwach',out:'Ausgeschieden',castle:'Burg',
+est:'Schätzfrage',tiebreak:'Stechen',duel:'Duell',order:'Sortierrätsel',send:'Senden',reset:'Zurücksetzen',answer:'Richtige Antwort',diff:'Abw.',noAnswer:'keine Antwort',
+pick2:'Wähle zwei Gebiete',pick1:'Wähle ein Gebiet',pickHint:'Tippe auf ein leuchtendes Gebiet.',botPick:'{p} wählt…',picked:'{p} → {r}',
+yourTurn:'Du greifst an',attackHint:'Tippe auf ein leuchtendes Feindgebiet. Achte auf Kategorie und Schwächen.',botTurn:'{p} greift an',
+took:'{a} erobert {r}',held:'{d} verteidigt {r} (+100)',none:'Beide lagen falsch. {r} bleibt, wie es war.',tie:'Beide richtig – die Schätzfrage entscheidet',
+tower:'Ein Turm der Burg {r} fällt. Übrig: {n}',fell:'{a} erobert die Burg von {d}!',noTarget:'{p} hat kein Ziel.',
+score:'Punkte',tapSkip:'Tippen zum Fortfahren',correct:'richtig',wrong:'falsch',timeout:'Zeit abgelaufen',legend:'Kategorien der Gebiete · die Kürzel stehen auf der Karte',
+zoomIn:'Vergrößern',zoomOut:'Ganze Karte',youLost:'Deine Burg ist gefallen.',win:'Du hast gewonnen!',lose:'{p} gewinnt',all:'Alle',orderHint:'Tippe die Einträge in der richtigen Reihenfolge an.',
+estHint:'Die nächste Schätzung gewinnt. Bei Gleichstand zählt die Zeit.',waitExpand:'Die Schätzfrage kommt…',final:'Endstand'},
+en:{sub:'prototype',quote:'The truest guide in life is knowledge.',tag:'Know, choose, conquer. Knowledge and strategy on the map of Türkiye against two bots.',
+r1:'Expansion: everyone answers the same estimate question. Closest picks 2 regions, second picks 1.',
+r2:'War: take turns attacking a neighbouring region. The question comes from that region\'s category.',
+r3:'If both answer right, an estimate question decides. A defended region gains +100 value.',
+r4:'To take a castle, knock down all 3 towers. All of the fallen player\'s land becomes yours.',
+r5:'Attack where the bots are weak. After 4 war rounds the highest score wins.',
+start:'Start game',again:'Play again',expand:'Expansion',war:'War',round:'Round',you:'You',strong:'Strong',weak:'Weak',out:'Out',castle:'Castle',
+est:'Estimate',tiebreak:'Tiebreaker',duel:'Duel',order:'Ordering puzzle',send:'Send',reset:'Reset',answer:'Correct answer',diff:'off by',noAnswer:'no answer',
+pick2:'Pick two regions',pick1:'Pick one region',pickHint:'Tap one of the glowing regions.',botPick:'{p} is picking…',picked:'{p} → {r}',
+yourTurn:'Your attack',attackHint:'Tap a glowing enemy region. Watch the category and your rival\'s weak spot.',botTurn:'{p} attacks',
+took:'{a} takes {r}',held:'{d} holds {r} (+100)',none:'Both missed. {r} stays put.',tie:'Both right – an estimate decides',
+tower:'A tower of {r} castle falls. Left: {n}',fell:'{a} conquers {d}\'s castle!',noTarget:'{p} has no target.',
+score:'pts',tapSkip:'Tap to continue',correct:'right',wrong:'wrong',timeout:'Time\'s up',legend:'Region categories · the letters are the map badges',
+zoomIn:'Zoom in',zoomOut:'Whole map',youLost:'Your castle fell.',win:'You win!',lose:'{p} wins',all:'Everyone',orderHint:'Tap the items in the right order.',
+estHint:'Closest guess wins. On a tie, the faster answer leads.',waitExpand:'Estimate question coming…',final:'Final standings'}
+};
+const t=(k,v)=>{let s=S[lang][k]??k;if(v)s=s.replace(/\{(\w+)\}/g,(m,x)=>v[x]);return s};
+
+/* ===================== categories & questions ===================== */
+const CATS=['hist','geo','sci','spo','art','gen'];
+const CAT={
+ hist:{c:'#C9925C',n:['Tarih','Geschichte','History'],ab:['Ta','Gs','Hi']},
+ geo:{c:'#63B86E',n:['Coğrafya','Geografie','Geography'],ab:['Co','Gg','Ge']},
+ sci:{c:'#5B8DEF',n:['Bilim','Wissenschaft','Science'],ab:['Bi','Wi','Sc']},
+ spo:{c:'#F08A3C',n:['Spor','Sport','Sport'],ab:['Sp','Sp','Sp']},
+ art:{c:'#E879B9',n:['Sanat','Kunst','Art'],ab:['Sa','Ku','Ar']},
+ gen:{c:'#A3ADBD',n:['Genel Kültür','Allgemeinwissen','General'],ab:['GK','AW','GK']}
+};
+const MC=[
+['hist',['İstanbul hangi yıl fethedildi?','In welchem Jahr wurde Konstantinopel erobert?','In which year was Constantinople conquered?'],['1453','1071','1299','1517']],
+['hist',['Malazgirt Meydan Muharebesi hangi yıl yapıldı?','In welchem Jahr fand die Schlacht von Manzikert statt?','In which year was the Battle of Manzikert?'],['1071','1176','1243','1402']],
+['hist',['Türkiye Cumhuriyeti hangi yıl ilan edildi?','In welchem Jahr wurde die Republik Türkei ausgerufen?','In which year was the Republic of Türkiye proclaimed?'],['1923','1920','1919','1938']],
+['hist',['Berlin Duvarı hangi yıl yıkıldı?','In welchem Jahr fiel die Berliner Mauer?','In which year did the Berlin Wall fall?'],['1989','1991','1985','1961']],
+['hist',['Osmanlı Devleti\'nin kurucusu kimdir?','Wer gründete das Osmanische Reich?','Who founded the Ottoman state?'],['Osman Bey','Orhan Bey','Ertuğrul Gazi',['I. Murad','Murad I.','Murad I']]],
+['hist',['1492\'de Amerika kıtasına ulaşan denizci kimdir?','Welcher Seefahrer erreichte 1492 Amerika?','Which navigator reached the Americas in 1492?'],[['Kristof Kolomb','Christoph Kolumbus','Christopher Columbus'],'Vasco da Gama',['Macellan','Magellan','Magellan'],'Amerigo Vespucci']],
+['hist',['Birinci Dünya Savaşı hangi yıl başladı?','In welchem Jahr begann der Erste Weltkrieg?','In which year did World War I begin?'],['1914','1918','1912','1939']],
+['hist',['Fransız İhtilali hangi yıl başladı?','In welchem Jahr begann die Französische Revolution?','In which year did the French Revolution begin?'],['1789','1776','1815','1848']],
+['hist',['Roma İmparatorluğu\'nun ilk imparatoru kimdir?','Wer war der erste römische Kaiser?','Who was the first Roman emperor?'],['Augustus',['Jül Sezar','Julius Caesar','Julius Caesar'],['Neron','Nero','Nero'],['Konstantin','Konstantin','Constantine']]],
+['hist',['Kanuni Sultan Süleyman Viyana\'yı ilk kez hangi yıl kuşattı?','In welchem Jahr belagerte Süleyman der Prächtige erstmals Wien?','In which year did Suleiman the Magnificent first besiege Vienna?'],['1529','1683','1453','1571']],
+['geo',['Türkiye\'nin en yüksek dağı hangisidir?','Welcher ist der höchste Berg der Türkei?','What is the highest mountain in Türkiye?'],[['Ağrı Dağı','Ararat','Mount Ararat'],'Erciyes','Uludağ','Süphan']],
+['geo',['Türkiye\'nin en büyük gölü hangisidir?','Welcher ist der größte See der Türkei?','What is the largest lake in Türkiye?'],[['Van Gölü','Vansee','Lake Van'],['Tuz Gölü','Tuz-See','Lake Tuz'],['Beyşehir Gölü','Beyşehir-See','Lake Beyşehir'],['Eğirdir Gölü','Eğirdir-See','Lake Eğirdir']]],
+['geo',['Avustralya\'nın başkenti neresidir?','Was ist die Hauptstadt Australiens?','What is the capital of Australia?'],[['Kanberra','Canberra','Canberra'],['Sidney','Sydney','Sydney'],'Melbourne','Perth']],
+['geo',['Dünyanın en büyük okyanusu hangisidir?','Welcher ist der größte Ozean der Erde?','Which is the largest ocean on Earth?'],[['Büyük Okyanus','Pazifik','Pacific'],['Atlas Okyanusu','Atlantik','Atlantic'],['Hint Okyanusu','Indischer Ozean','Indian Ocean'],['Arktik Okyanusu','Arktischer Ozean','Arctic Ocean']]],
+['geo',['Kanada\'nın başkenti neresidir?','Was ist die Hauptstadt Kanadas?','What is the capital of Canada?'],['Ottawa','Toronto','Montreal','Vancouver']],
+['geo',['Fırat ve Dicle birleşerek nereye dökülür?','Wohin münden Euphrat und Tigris gemeinsam?','Where do the Euphrates and Tigris flow into together?'],[['Basra Körfezi','Persischer Golf','Persian Gulf'],['Akdeniz','Mittelmeer','Mediterranean Sea'],['Kızıldeniz','Rotes Meer','Red Sea'],['Hazar Denizi','Kaspisches Meer','Caspian Sea']]],
+['geo',['Brezilya\'nın başkenti neresidir?','Was ist die Hauptstadt Brasiliens?','What is the capital of Brazil?'],['Brasília','Rio de Janeiro','São Paulo','Salvador']],
+['geo',['Ren Nehri hangi denize dökülür?','In welches Meer mündet der Rhein?','Into which sea does the Rhine flow?'],[['Kuzey Denizi','Nordsee','North Sea'],['Baltık Denizi','Ostsee','Baltic Sea'],['Karadeniz','Schwarzes Meer','Black Sea'],['Akdeniz','Mittelmeer','Mediterranean Sea']]],
+['geo',['Peri bacalarıyla ünlü Kapadokya\'nın merkezi hangi ildedir?','In welcher Provinz liegt das Zentrum Kappadokiens mit seinen Feenkaminen?','Which province is the centre of Cappadocia, famous for its fairy chimneys?'],['Nevşehir','Konya','Sivas','Erzurum']],
+['geo',['2023\'ten beri dünyanın en kalabalık ülkesi hangisidir?','Welches Land hat seit 2023 die meisten Einwohner?','Since 2023, which country has the largest population?'],[['Hindistan','Indien','India'],['Çin','China','China'],['ABD','USA','USA'],['Endonezya','Indonesien','Indonesia']]],
+['sci',['Suyun kimyasal formülü nedir?','Wie lautet die chemische Formel von Wasser?','What is the chemical formula of water?'],['H₂O','CO₂','H₂O₂','O₂']],
+['sci',['Güneş\'e en yakın gezegen hangisidir?','Welcher Planet ist der Sonne am nächsten?','Which planet is closest to the Sun?'],[['Merkür','Merkur','Mercury'],['Venüs','Venus','Venus'],'Mars',['Dünya','Erde','Earth']]],
+['sci',['Işığın boşluktaki hızı yaklaşık ne kadardır?','Wie schnell ist Licht im Vakuum ungefähr?','Roughly how fast does light travel in a vacuum?'],['300 000 km/s','30 000 km/s','3 000 000 km/s','150 000 km/s']],
+['sci',['İnsan vücudunun en büyük organı hangisidir?','Welches ist das größte Organ des Menschen?','What is the largest organ of the human body?'],[['Deri','Haut','Skin'],['Karaciğer','Leber','Liver'],['Akciğer','Lunge','Lungs'],['Beyin','Gehirn','Brain']]],
+['sci',['Altının kimyasal sembolü nedir?','Was ist das chemische Symbol für Gold?','What is the chemical symbol for gold?'],['Au','Ag','Al','Fe']],
+['sci',['Evrensel çekim yasasını kim formüle etti?','Wer formulierte das Gravitationsgesetz?','Who formulated the law of universal gravitation?'],['Isaac Newton','Galileo Galilei','Albert Einstein','Nikola Tesla']],
+['sci',['İnsan hücrelerinde kaç çift kromozom bulunur?','Wie viele Chromosomenpaare hat der Mensch?','How many pairs of chromosomes do humans have?'],['23','22','24','46']],
+['sci',['Penisilini kim keşfetti?','Wer entdeckte das Penicillin?','Who discovered penicillin?'],['Alexander Fleming','Louis Pasteur','Marie Curie','Robert Koch']],
+['sci',['Mutlak sıfır yaklaşık kaç santigrat derecedir?','Bei wie viel Grad Celsius liegt etwa der absolute Nullpunkt?','Absolute zero is roughly how many degrees Celsius?'],['−273 °C','−173 °C','−373 °C','−100 °C']],
+['sci',['Bitkiler fotosentez için havadan hangi gazı alır?','Welches Gas nehmen Pflanzen für die Fotosynthese aus der Luft auf?','Which gas do plants take from the air for photosynthesis?'],['CO₂','O₂','N₂','H₂']],
+['spo',['Bir futbol takımı sahaya kaç oyuncuyla çıkar?','Mit wie vielen Spielern steht eine Fußballmannschaft auf dem Platz?','How many players does a football team have on the pitch?'],['11','10','12','9']],
+['spo',['2022 FIFA Dünya Kupası\'nı hangi ülke kazandı?','Welches Land gewann die FIFA-WM 2022?','Which country won the 2022 FIFA World Cup?'],[['Arjantin','Argentinien','Argentina'],['Fransa','Frankreich','France'],['Brezilya','Brasilien','Brazil'],['Hırvatistan','Kroatien','Croatia']]],
+['spo',['Olimpiyat bayrağında kaç halka vardır?','Wie viele Ringe hat die olympische Flagge?','How many rings are on the Olympic flag?'],['5','4','6','7']],
+['spo',['Bir basketbol takımı sahada kaç oyuncuyla oynar?','Wie viele Spieler hat ein Basketballteam auf dem Feld?','How many players does a basketball team have on the court?'],['5','6','7','4']],
+['spo',['Galatasaray UEFA Kupası\'nı hangi yıl kazandı?','In welchem Jahr gewann Galatasaray den UEFA-Pokal?','In which year did Galatasaray win the UEFA Cup?'],['2000','1999','2001','2002']],
+['spo',['Wimbledon tenis turnuvası hangi zeminde oynanır?','Auf welchem Belag wird Wimbledon gespielt?','On which surface is Wimbledon played?'],[['Çim','Rasen','Grass'],['Toprak','Sand','Clay'],['Sert kort','Hartplatz','Hard court'],['Halı','Teppich','Carpet']]],
+['spo',['Maraton koşusu kaç kilometredir?','Wie lang ist ein Marathon?','How long is a marathon?'],[['42,195 km','42,195 km','42.195 km'],'40 km',['21,1 km','21,1 km','21.1 km'],'50 km']],
+['spo',['Türkiye 2002 Dünya Kupası\'nı kaçıncı sırada tamamladı?','Auf welchem Platz beendete die Türkei die WM 2002?','In which place did Türkiye finish the 2002 World Cup?'],[['3.','3.','3rd'],['4.','4.','4th'],['2.','2.','2nd'],['8.','8.','8th']]],
+['spo',['Michael Schumacher ile birlikte 7 Formula 1 şampiyonluğu bulunan pilot kimdir?','Welcher Fahrer hat wie Michael Schumacher 7 Formel-1-Titel?','Which driver shares the record of 7 Formula 1 titles with Michael Schumacher?'],['Lewis Hamilton','Sebastian Vettel','Ayrton Senna','Fernando Alonso']],
+['spo',['Voleybolda bir set (son set hariç) kaç sayıda biter?','Bei wie vielen Punkten endet ein Volleyballsatz (außer dem Entscheidungssatz)?','How many points win a volleyball set (except the deciding set)?'],['25','21','15','30']],
+['art',['Mona Lisa tablosunu kim yaptı?','Wer malte die Mona Lisa?','Who painted the Mona Lisa?'],['Leonardo da Vinci','Michelangelo',['Rafael','Raffael','Raphael'],'Rembrandt']],
+['art',['Ludwig van Beethoven bugünkü hangi ülkede doğdu?','Im heutigen welchem Land wurde Ludwig van Beethoven geboren?','In which present-day country was Ludwig van Beethoven born?'],[['Almanya','Deutschland','Germany'],['Avusturya','Österreich','Austria'],['Fransa','Frankreich','France'],['İtalya','Italien','Italy']]],
+['art',['İstiklal Marşı\'nın şairi kimdir?','Wer dichtete die türkische Nationalhymne?','Who wrote the Turkish national anthem?'],['Mehmet Akif Ersoy','Nazım Hikmet','Yahya Kemal Beyatlı','Necip Fazıl Kısakürek']],
+['art',['Süleymaniye Camii\'nin mimarı kimdir?','Wer war der Architekt der Süleymaniye-Moschee?','Who was the architect of the Süleymaniye Mosque?'],['Mimar Sinan','Mimar Kemaleddin','Sedefkâr Mehmed Ağa','Davud Ağa']],
+['art',['"Romeo ve Juliet"in yazarı kimdir?','Wer schrieb „Romeo und Julia“?','Who wrote "Romeo and Juliet"?'],['William Shakespeare','Charles Dickens','Molière','J. W. von Goethe']],
+['art',['"Yıldızlı Gece" tablosunun ressamı kimdir?','Wer malte „Die Sternennacht“?','Who painted "The Starry Night"?'],['Vincent van Gogh','Claude Monet','Pablo Picasso','Salvador Dalí']],
+['art',['"Faust" adlı eserin yazarı kimdir?','Wer schrieb „Faust“?','Who wrote "Faust"?'],['J. W. von Goethe','Friedrich Schiller','Thomas Mann','Heinrich Heine']],
+['art',['Standart bir piyanoda kaç tuş vardır?','Wie viele Tasten hat ein Standardklavier?','How many keys does a standard piano have?'],['88','76','96','104']],
+['art',['"Don Kişot" romanının yazarı kimdir?','Wer schrieb „Don Quijote“?','Who wrote "Don Quixote"?'],['Miguel de Cervantes','Lope de Vega','Dante Alighieri','Victor Hugo']],
+['art',['Orhan Pamuk Nobel Edebiyat Ödülü\'nü hangi yıl aldı?','In welchem Jahr erhielt Orhan Pamuk den Literaturnobelpreis?','In which year did Orhan Pamuk win the Nobel Prize in Literature?'],['2006','2004','2008','2010']],
+['gen',['Bir yılda yaklaşık kaç hafta vardır?','Wie viele Wochen hat ein Jahr ungefähr?','About how many weeks are in a year?'],['52','48','50','56']],
+['gen',['Gökkuşağında geleneksel olarak kaç renk sayılır?','Wie viele Farben zählt man traditionell im Regenbogen?','How many colours are traditionally counted in a rainbow?'],['7','6','8','5']],
+['gen',['Satrançta her oyuncu kaç piyonla başlar?','Mit wie vielen Bauern beginnt jeder Spieler beim Schach?','How many pawns does each player start with in chess?'],['8','6','10','7']],
+['gen',['Euro banknot ve madeni paraları hangi yıl tedavüle girdi?','In welchem Jahr kamen Euro-Banknoten und -Münzen in Umlauf?','In which year did euro notes and coins enter circulation?'],['2002','1999','2001','2004']],
+['gen',['"Kızıl Gezegen" olarak bilinen gezegen hangisidir?','Welcher Planet wird „Roter Planet“ genannt?','Which planet is known as the "Red Planet"?'],['Mars',['Jüpiter','Jupiter','Jupiter'],['Venüs','Venus','Venus'],['Satürn','Saturn','Saturn']]],
+['gen',['Bir düzine kaç tanedir?','Wie viele Stück sind ein Dutzend?','How many are in a dozen?'],['12','10','6','20']],
+['gen',['Artık yıllarda şubat ayı kaç gün çeker?','Wie viele Tage hat der Februar in einem Schaltjahr?','How many days does February have in a leap year?'],['29','28','30','31']],
+['gen',['Plaka kodu 06 olan il hangisidir?','Welche türkische Provinz hat das Kfz-Kennzeichen 06?','Which Turkish province has the licence plate code 06?'],['Ankara','İstanbul','İzmir','Adana']],
+['gen',['Hangisi memeli değildir?','Welches Tier ist kein Säugetier?','Which of these is not a mammal?'],[['Penguen','Pinguin','Penguin'],['Yunus','Delfin','Dolphin'],['Yarasa','Fledermaus','Bat'],['Balina','Wal','Whale']]],
+['gen',['Japonya\'nın para birimi nedir?','Wie heißt die Währung Japans?','What is the currency of Japan?'],['Yen','Won','Yuan','Ringgit']]
+];
+const EST=[
+['geo',['Ağrı Dağı kaç metre yüksekliğindedir?','Wie hoch ist der Ararat in Metern?','How high is Mount Ararat in metres?'],5137,'m'],
+['gen',['Türkiye\'de kaç il vardır?','Wie viele Provinzen hat die Türkei?','How many provinces does Türkiye have?'],81,''],
+['geo',['Everest Dağı kaç metre yüksekliğindedir?','Wie hoch ist der Mount Everest in Metern?','How high is Mount Everest in metres?'],8849,'m'],
+['hist',['Eyfel Kulesi hangi yıl tamamlandı?','In welchem Jahr wurde der Eiffelturm fertiggestellt?','In which year was the Eiffel Tower completed?'],1889,'y'],
+['geo',['Türkiye\'nin yüzölçümü kaç km²\'dir?','Wie groß ist die Fläche der Türkei in km²?','What is the area of Türkiye in km²?'],783562,'km²'],
+['sci',['Ay\'ın Dünya\'ya ortalama uzaklığı kaç km\'dir?','Wie weit ist der Mond im Mittel von der Erde entfernt (km)?','What is the average distance from Earth to the Moon in km?'],384400,'km'],
+['hist',['Mustafa Kemal Atatürk hangi yıl doğdu?','In welchem Jahr wurde Mustafa Kemal Atatürk geboren?','In which year was Mustafa Kemal Atatürk born?'],1881,'y'],
+['sci',['İnsanlı ilk Ay inişi hangi yıl gerçekleşti?','In welchem Jahr landeten erstmals Menschen auf dem Mond?','In which year did humans first land on the Moon?'],1969,'y'],
+['art',['Wolfgang Amadeus Mozart hangi yıl doğdu?','In welchem Jahr wurde Wolfgang Amadeus Mozart geboren?','In which year was Wolfgang Amadeus Mozart born?'],1756,'y'],
+['sci',['Yetişkin bir insanın iskeletinde kaç kemik vardır?','Wie viele Knochen hat das Skelett eines Erwachsenen?','How many bones are in an adult human skeleton?'],206,''],
+['sci',['Su deniz seviyesinde kaç Fahrenheit derecede kaynar?','Bei wie viel Grad Fahrenheit kocht Wasser auf Meereshöhe?','At how many degrees Fahrenheit does water boil at sea level?'],212,'°F'],
+['geo',['Almanya\'nın kaç eyaleti vardır?','Wie viele Bundesländer hat Deutschland?','How many federal states does Germany have?'],16,''],
+['spo',['Maraton koşusu kaç metredir?','Wie viele Meter ist ein Marathon lang?','How many metres long is a marathon?'],42195,'m'],
+['spo',['Galatasaray hangi yıl kuruldu?','In welchem Jahr wurde Galatasaray gegründet?','In which year was Galatasaray founded?'],1905,'y'],
+['sci',['Ses havada (20 °C) saniyede kaç metre yol alır?','Wie viele Meter pro Sekunde legt Schall in Luft (20 °C) zurück?','How many metres per second does sound travel in air (20 °C)?'],343,'m/s'],
+['gen',['Artık olmayan bir yılda kaç saat vardır?','Wie viele Stunden hat ein Jahr ohne Schalttag?','How many hours are in a non-leap year?'],8760,''],
+['hist',['Kanuni Sultan Süleyman hangi yıl tahta çıktı?','In welchem Jahr bestieg Süleyman der Prächtige den Thron?','In which year did Suleiman the Magnificent take the throne?'],1520,'y'],
+['hist',['Berlin Duvarı hangi yıl inşa edildi?','In welchem Jahr wurde die Berliner Mauer gebaut?','In which year was the Berlin Wall built?'],1961,'y'],
+['gen',['Bir satranç tahtasında kaç kare vardır?','Wie viele Felder hat ein Schachbrett?','How many squares are on a chessboard?'],64,''],
+['geo',['1915 Çanakkale Köprüsü\'nün orta açıklığı kaç metredir?','Wie lang ist die Hauptspannweite der Çanakkale-1915-Brücke in Metern?','How long is the main span of the 1915 Çanakkale Bridge in metres?'],2023,'m'],
+['art',['Leonardo da Vinci hangi yıl doğdu?','In welchem Jahr wurde Leonardo da Vinci geboren?','In which year was Leonardo da Vinci born?'],1452,'y'],
+['spo',['Modern Olimpiyat Oyunları ilk kez hangi yıl düzenlendi?','In welchem Jahr fanden die ersten modernen Olympischen Spiele statt?','In which year were the first modern Olympic Games held?'],1896,'y']
+];
+const ORD=[
+['sci',['Gezegenleri Güneş\'e en yakından başlayarak sırala','Ordne die Planeten nach Nähe zur Sonne, nächster zuerst','Order the planets by distance from the Sun, closest first'],[['Merkür','Merkur','Mercury'],['Venüs','Venus','Venus'],['Dünya','Erde','Earth'],'Mars']],
+['hist',['Olayları eskiden yeniye sırala','Ordne die Ereignisse von alt nach neu','Order the events from oldest to newest'],[['Malazgirt Muharebesi','Schlacht von Manzikert','Battle of Manzikert'],['İstanbul\'un Fethi','Eroberung Konstantinopels','Conquest of Constantinople'],['Fransız İhtilali','Französische Revolution','French Revolution'],['Cumhuriyet\'in İlanı','Ausrufung der Republik Türkei','Proclamation of the Turkish Republic']]],
+['hist',['Osmanlı padişahlarını tahta çıkış sırasına göre sırala','Ordne die osmanischen Herrscher nach Regierungszeit, frühester zuerst','Order the Ottoman rulers by reign, earliest first'],['Osman Bey','Orhan Bey',['Fatih Sultan Mehmed','Mehmed II.','Mehmed II'],['Kanuni Sultan Süleyman','Süleyman I.','Suleiman I']]],
+['geo',['Dağları en yüksekten başlayarak sırala','Ordne die Berge nach Höhe, höchster zuerst','Order the mountains by height, highest first'],['Everest',['Ağrı Dağı','Ararat','Mount Ararat'],'Mont Blanc','Zugspitze']],
+['geo',['Şehirleri batıdan doğuya sırala','Ordne die Städte von West nach Ost','Order the cities from west to east'],['İzmir','Ankara','Erzurum','Van']],
+['gen',['Ülkeleri nüfusa göre en kalabalıktan başlayarak sırala','Ordne die Länder nach Einwohnerzahl, größtes zuerst','Order the countries by population, largest first'],[['Hindistan','Indien','India'],['ABD','USA','USA'],['Türkiye','Türkei','Türkiye'],['Avusturya','Österreich','Austria']]],
+['gen',['Birimleri küçükten büyüğe sırala','Ordne die Einheiten von klein nach groß','Order the units from smallest to largest'],['Kilobyte','Megabyte','Gigabyte','Terabyte']],
+['art',['Bestecileri doğum yılına göre eskiden yeniye sırala','Ordne die Komponisten nach Geburtsjahr, frühester zuerst','Order the composers by birth year, earliest first'],['J. S. Bach','W. A. Mozart','L. van Beethoven','F. Chopin']],
+['art',['Ressamları doğum yılına göre eskiden yeniye sırala','Ordne die Maler nach Geburtsjahr, frühester zuerst','Order the painters by birth year, earliest first'],['Leonardo da Vinci','Rembrandt','Vincent van Gogh','Pablo Picasso']],
+['spo',['Sporları takım başına sahadaki oyuncu sayısına göre azdan çoğa sırala','Ordne die Sportarten nach Spielern pro Team auf dem Feld, wenigste zuerst','Order the sports by players per team on the field, fewest first'],[['Basketbol','Basketball','Basketball'],['Voleybol','Volleyball','Volleyball'],['Futbol','Fußball','Football'],['Rugby Union','Rugby Union','Rugby union']]],
+['spo',['Yaz Olimpiyatlarını eskiden yeniye sırala','Ordne die Sommerspiele von alt nach neu','Order the Summer Olympics from oldest to newest'],[['Seul','Seoul','Seoul'],['Sidney','Sydney','Sydney'],['Pekin','Peking','Beijing'],'Rio de Janeiro']]
+];
+const pools={mc:MC.map((q,i)=>({type:'mc',c:q[0],q:q[1],a:q[2],id:'m'+i})),est:EST.map((q,i)=>({type:'est',c:q[0],q:q[1],v:q[2],u:q[3],id:'e'+i})),ord:ORD.map((q,i)=>({type:'ord',c:q[0],q:q[1],items:q[2],id:'o'+i}))};
+const used=new Set();
+function draw(list){let f=list.filter(q=>!used.has(q.id));if(!f.length){list.forEach(q=>used.delete(q.id));f=list}const q=f[Math.floor(Math.random()*f.length)];used.add(q.id);return q}
+const nextEst=()=>draw(pools.est);
+function nextDuel(cat){const ords=pools.ord.filter(q=>q.c===cat);if(ords.length&&Math.random()<0.3)return draw(ords);return draw(pools.mc.filter(q=>q.c===cat))}
+
+/* ===================== helpers ===================== */
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LOC={tr:'tr-TR',de:'de-DE',en:'en-US'};
+const fmtN=(n,year)=>n==null?'—':new Intl.NumberFormat(LOC[lang],{useGrouping:!year}).format(n);
+const hexRgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+
+/* ===================== map geometry ===================== */
+const W=1400,LON0=25.7,LON1=45.0,LAT0=35.6,LAT1=42.3,K=W/(LON1-LON0),H=Math.round((LAT1-LAT0)*1.3*K),N=W*H;
+const px=lon=>(lon-LON0)*K, py=lat=>(LAT1-lat)*1.3*K;
+const OUTER=[[26.05,40.73],[26.35,41.25],[26.33,41.7],[26.6,41.95],[27.5,42.02],[28.0,41.65],[29.1,41.25],[30.3,41.2],[31.3,41.3],[32.3,41.75],[33.3,42.0],[34.8,41.98],[35.2,42.05],[35.6,41.62],[36.3,41.3],[37.0,41.15],[38.3,40.95],[39.7,41.02],[40.6,41.15],[41.5,41.5],[42.5,41.45],[43.4,41.15],[43.6,40.75],[43.7,40.3],[44.4,40.0],[44.8,39.65],[44.4,39.4],[44.3,38.8],[44.25,38.3],[44.4,37.85],[44.7,37.3],[44.25,37.1],[43.3,37.3],[42.4,37.15],[41.2,37.1],[40.0,36.85],[38.8,36.75],[37.8,36.65],[36.7,36.82],[36.45,36.2],[35.95,35.85],[35.8,36.25],[36.15,36.55],[35.6,36.6],[34.7,36.8],[34.0,36.3],[33.4,36.15],[32.6,36.05],[32.0,36.5],[31.2,36.8],[30.6,36.85],[30.45,36.4],[30.2,36.25],[29.6,36.15],[29.1,36.65],[28.2,36.7],[27.6,36.75],[27.3,37.0],[27.25,37.4],[27.0,37.9],[26.3,38.3],[26.6,38.45],[26.9,38.6],[26.75,39.0],[26.7,39.3],[27.0,39.55],[26.6,39.6],[26.1,39.5],[26.15,39.95],[26.2,40.1],[26.15,40.35],[26.3,40.55]];
+const HOLE=[[26.75,40.42],[27.3,40.35],[28.0,40.38],[28.9,40.38],[29.4,40.72],[29.0,40.97],[28.5,40.98],[27.6,40.95],[27.0,40.7],[26.7,40.5]];
+const REG=[['Edirne',26.75,41.55],['İstanbul',28.9,41.12],['Bursa',29.1,40.05],['Eskişehir',30.6,39.7],['İzmir',27.55,38.45],['Denizli',29.15,37.75],['Antalya',30.8,37.05],['Konya',32.6,37.85],['Ankara',32.9,39.85],['Kastamonu',33.7,41.3],['Samsun',36.0,40.95],['Kayseri',35.6,38.75],['Adana',35.3,37.1],['Sivas',37.1,39.75],['Trabzon',39.6,40.75],['Erzurum',41.3,39.95],['Diyarbakır',40.2,37.95],['Gaziantep',37.5,37.15],['Van',43.4,38.55]];
+const CASTLES=[[4,10,16],[0,7,15],[6,9,18],[2,12,14],[1,11,16]];
+
+function hash(i,j){let h=(i*374761393+j*668265263)|0;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967295}
+function vn(x,y){const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=hash(i,j),b=hash(i+1,j),c=hash(i,j+1),d=hash(i+1,j+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function fill(poly,mask,val){const P=poly.map(p=>[px(p[0]),py(p[1])]);for(let y=0;y<H;y++){const yy=y+.5,xs=[];for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];if((a[1]<=yy&&b[1]>yy)||(b[1]<=yy&&a[1]>yy))xs.push(a[0]+(yy-a[1])/(b[1]-a[1])*(b[0]-a[0]))}xs.sort((p,q)=>p-q);for(let k=0;k+1<xs.length;k+=2){const x0=Math.max(0,Math.ceil(xs[k]-.5)),x1=Math.min(W-1,Math.floor(xs[k+1]-.5));for(let x=x0;x<=x1;x++)mask[y*W+x]=val}}}
+const rmap=new Int16Array(N).fill(-1),shade=new Uint8Array(N),coast=new Uint8Array(N),grid=new Uint8Array(N);
+let REGINFO=[],ADJ=[];
+function buildMap(){
+  const land=new Uint8Array(N);fill(OUTER,land,1);fill(HOLE,land,0);
+  const seeds=REG.map(r=>[px(r[1]),py(r[2])]);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!land[i])continue;
+    const wx=x+(vn(x/55,y/55)*.7+vn(x/18,y/18)*.3-.5)*70,wy=y+(vn(x/55+40,y/55+17)*.7+vn(x/18+9,y/18+3)*.3-.5)*70;
+    let best=-1,bd=1e12;for(let s=0;s<seeds.length;s++){const dx=wx-seeds[s][0],dy=wy-seeds[s][1],d=dx*dx+dy*dy;if(d<bd){bd=d;best=s}}
+    rmap[i]=best;shade[i]=Math.round(255*(.9+.1*vn(x/7,y/7)))}
+  const cnt=REG.map(()=>[0,0,0]);const adjc=REG.map(()=>new Array(REG.length).fill(0));
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,r=rmap[i];
+    if(r>=0){cnt[r][0]++;cnt[r][1]+=x;cnt[r][2]+=y;
+      if(x<W-1){const q=rmap[i+1];if(q>=0&&q!==r){adjc[r][q]++;adjc[q][r]++}}
+      if(y<H-1){const q=rmap[i+W];if(q>=0&&q!==r){adjc[r][q]++;adjc[q][r]++}}}
+    else{const nb=(x>0&&rmap[i-1]>=0)||(x<W-1&&rmap[i+1]>=0)||(y>0&&rmap[i-W]>=0)||(y<H-1&&rmap[i+W]>=0);if(nb)coast[i]=1}}
+  for(let lo=26;lo<=45;lo++){const c=Math.round(px(lo));if(c>=0&&c<W)for(let y=0;y<H;y++)if((y>>2)%2===0)grid[y*W+c]=1}
+  for(let la=36;la<=42;la++){const r=Math.round(py(la));if(r>=0&&r<H)for(let x=0;x<W;x++)if((x>>2)%2===0)grid[r*W+x]=1}
+  REGINFO=cnt.map((c,i)=>{let cx=c[1]/c[0],cy=c[2]/c[0];if(rmap[Math.round(cy)*W+Math.round(cx)]!==i){cx=seeds[i][0];cy=seeds[i][1]}return{cx,cy}});
+  ADJ=adjc.map(row=>row.map((v,j)=>v>=6?j:-1).filter(j=>j>=0));
+}
+
+/* ===================== state ===================== */
+const PCOL=['#2BB3C0','#E0565B','#9B7BEA'];
+let G=null;
+function newGame(){
+  const castles=shuffle(CASTLES[Math.floor(Math.random()*CASTLES.length)]);
+  const cats=shuffle([...CATS,...CATS,...CATS,'gen']);
+  const regions=REG.map((r,i)=>({name:r[0],cat:cats[i],owner:-1,value:200,castle:false,towers:0}));
+  const strong=shuffle(CATS);
+  const prof=k=>{const p={};CATS.forEach(c=>p[c]=rnd(.5,.68));const s=strong[k*2],w=strong[k*2+1];p[s]=.84;p[w]=.34;return{p,s,w}};
+  const players=[{name:null,human:true,color:PCOL[0],alive:true},{name:'Ayla',color:PCOL[1],alive:true,...prof(0)},{name:'Kaan',color:PCOL[2],alive:true,...prof(1)}];
+  castles.forEach((ri,pid)=>{const r=regions[ri];r.owner=pid;r.castle=true;r.towers=3;r.value=1000;players[pid].castle=ri});
+  G={players,regions,phase:'expand',round:0,active:-1};
+}
+const pname=pid=>pid===0?t('you'):G.players[pid].name;
+const accOf=(pid,cat)=>pid===0?.6:G.players[pid].p[cat];
+const score=pid=>G.regions.reduce((s,r)=>s+(r.owner===pid?r.value:0),0);
+const owned=pid=>G.regions.map((r,i)=>i).filter(i=>G.regions[i].owner===pid);
+const freeR=()=>G.regions.map((r,i)=>i).filter(i=>G.regions[i].owner<0);
+const alive=()=>G.players.map((p,i)=>i).filter(i=>G.players[i].alive);
+
+/* ===================== rendering ===================== */
+const cv=$('#map'),ctx=cv.getContext('2d');cv.width=W;cv.height=H;
+const base=document.createElement('canvas');base.width=W;base.height=H;const bctx=base.getContext('2d');
+const hl=document.createElement('canvas');hl.width=W;hl.height=H;const hctx=hl.getContext('2d');
+let hlSet=new Set(),focus=-1,anim=0;
+function renderBase(){
+  const img=bctx.createImageData(W,H),d=img.data;
+  const cols=REG.map((r,i)=>hexRgb(G&&G.regions[i].owner>=0?G.players[G.regions[i].owner].color:'#3B4458'));
+  const sea=[14,22,38],gr=[24,35,58],co=[36,54,90],bd=[7,11,19];
+  for(let i=0,j=0;i<N;i++,j+=4){const r=rmap[i];let c;
+    if(r<0){c=coast[i]?co:grid[i]?gr:sea;d[j]=c[0];d[j+1]=c[1];d[j+2]=c[2]}
+    else{const x=i%W;const b=(x<W-1&&rmap[i+1]!==r)||(x>0&&rmap[i-1]!==r)||(i+W<N&&rmap[i+W]!==r)||(i>=W&&rmap[i-W]!==r);
+      if(b){d[j]=bd[0];d[j+1]=bd[1];d[j+2]=bd[2]}else{c=cols[r];const f=shade[i]/255;d[j]=c[0]*f;d[j+1]=c[1]*f;d[j+2]=c[2]*f}}
+    d[j+3]=255}
+  bctx.putImageData(img,0,0);
+}
+function renderHL(){
+  hctx.clearRect(0,0,W,H);if(!hlSet.size&&focus<0)return;
+  const img=hctx.createImageData(W,H),d=img.data;
+  for(let i=0,j=0;i<N;i++,j+=4){const r=rmap[i];if(r<0)continue;if(r===focus){d[j]=255;d[j+1]=210;d[j+2]=90;d[j+3]=255}else if(hlSet.has(r)){d[j]=d[j+1]=d[j+2]=255;d[j+3]=255}}
+  hctx.putImageData(img,0,0);
+}
+function setHL(set,f=-1){hlSet=new Set(set);focus=f;renderHL();if(!anim)anim=requestAnimationFrame(frame);paint()}
+function clearHL(){hlSet=new Set();focus=-1;renderHL();paint()}
+function frame(now){paint(now);if(hlSet.size||focus>=0)anim=requestAnimationFrame(frame);else anim=0}
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function drawCastle(x,y,s,col,towers){
+  ctx.save();ctx.translate(x,y);ctx.fillStyle='#F3EEDF';ctx.strokeStyle='#070B13';ctx.lineWidth=3;
+  ctx.beginPath();const w=s,h=s*.62;ctx.moveTo(-w,h);ctx.lineTo(-w,-h);
+  const m=w*2/5;for(let k=0;k<5;k++){const x0=-w+k*m;if(k%2===0){ctx.lineTo(x0,-h-s*.32);ctx.lineTo(x0+m,-h-s*.32);ctx.lineTo(x0+m,-h)}else ctx.lineTo(x0+m,-h)}
+  ctx.lineTo(w,h);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-s*.25,h);ctx.lineTo(-s*.25,0);ctx.arc(0,0,s*.25,Math.PI,0);ctx.lineTo(s*.25,h);ctx.closePath();ctx.fill();
+  for(let k=0;k<3;k++){ctx.fillStyle=k<towers?'#F2C14E':'#2a3248';ctx.fillRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3);ctx.strokeRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3)}
+  ctx.restore();
+}
+function paint(now=performance.now()){
+  ctx.clearRect(0,0,W,H);ctx.drawImage(base,0,0);
+  if(hlSet.size||focus>=0){ctx.globalAlpha=reduced?.3:.16+.2*(Math.sin(now/260)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
+  if(!G)return;
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  G.regions.forEach((r,i)=>{const {cx,cy}=REGINFO[i];
+    ctx.font='600 27px "IBM Plex Sans",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(7,11,19,.85)';ctx.fillStyle='#fff';
+    ctx.strokeText(r.name,cx,cy-16);ctx.fillText(r.name,cx,cy-16);
+    const k=CAT[r.cat];
+    if(r.castle){drawCastle(cx+20,cy+20,17,r.owner>=0?G.players[r.owner].color:'#3B4458',r.towers);drawBadge(cx-20,cy+20,k)}
+    else{drawBadge(cx-24,cy+18,k);ctx.font='600 22px "IBM Plex Mono",ui-monospace,monospace';ctx.lineWidth=5;ctx.strokeStyle='rgba(7,11,19,.85)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
+  });
+}
+function drawBadge(x,y,k){ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.fillStyle='#0B111D';ctx.fill();ctx.lineWidth=3.5;ctx.strokeStyle=k.c;ctx.stroke();ctx.fillStyle=k.c;ctx.font='700 14px "IBM Plex Sans",system-ui,sans-serif';ctx.fillText(T(k.ab),x,y+1)}
+function redrawAll(){renderBase();paint();renderPlayers()}
+
+/* ===================== UI chrome ===================== */
+function renderLangs(){$('#langs').innerHTML=LANGS.map(l=>`<button data-l="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(!b)return;lang=b.dataset.l;try{localStorage.setItem('pusula.lang',lang)}catch(_){}document.documentElement.lang=lang;refreshLang()});
+function refreshLang(){renderLangs();$('#sub').textContent=t('sub');renderPlayers();renderLegend();renderStatus();renderPhase();renderZoom();paint();if(ovRerender)ovRerender()}
+function renderPlayers(){
+  if(!G){$('#players').innerHTML='';return}
+  $('#players').innerHTML=G.players.map((p,i)=>{
+    const c=G.regions[p.castle];const pips=[0,1,2].map(k=>`<i class="${c.owner===i&&k<c.towers?'':'down'}"></i>`).join('');
+    const meta=p.human?`${t('castle')} <span class="pips">${pips}</span>`:`${t('strong')}: <b>${T(CAT[p.s].n)}</b><br>${t('weak')}: <b>${T(CAT[p.w].n)}</b>`;
+    return `<div class="pc${G.active===i?' active':''}${p.alive?'':' out'}" style="--c:${p.color}"><div class="nm"><span>${esc(pname(i))}</span>${p.human?'':`<span class="pips">${pips}</span>`}</div><div class="sc">${fmtN(score(i))}<small>${t('score')}</small></div><div class="meta">${p.alive?meta:t('out')}</div></div>`}).join('');
+}
+function renderLegend(){$('#legend').innerHTML=`<div class="lt">${t('legend')}</div>`+CATS.map(c=>`<span class="lg"><span class="badge" style="--k:${CAT[c].c}">${T(CAT[c].ab)}</span>${T(CAT[c].n)}</span>`).join('')}
+function renderPhase(){$('#phase').textContent=!G||G.round===0?'—':G.phase==='expand'?`${t('expand')} · ${t('round')} ${G.round}`:G.phase==='war'?`${t('war')} · ${t('round')} ${G.round}/4`:t('final')}
+let statusFn=()=>['',''];
+function setStatus(fn){statusFn=fn;renderStatus()}
+function renderStatus(){const [m,s]=statusFn();$('#sm').textContent=m;$('#ss').textContent=s||''}
+let toastT;function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2800)}
+const ms=$('#mapscroll');let zoomed=innerWidth<720;
+function renderZoom(){ms.classList.toggle('zoom',zoomed);$('#zoomb').textContent=zoomed?t('zoomOut'):t('zoomIn');$('#zoomb').hidden=innerWidth>=720&&!zoomed}
+$('#zoomb').onclick=()=>{zoomed=!zoomed;renderZoom()};
+function scrollToRegions(list){if(!list.length||ms.scrollWidth<=ms.clientWidth)return;const x=list.reduce((s,i)=>s+REGINFO[i].cx,0)/list.length;ms.scrollTo({left:x/W*ms.scrollWidth-ms.clientWidth/2,behavior:reduced?'auto':'smooth'})}
+
+/* region taps */
+let tapWaiter=null;
+cv.addEventListener('click',e=>{if(!tapWaiter)return;const b=cv.getBoundingClientRect();const x=Math.floor((e.clientX-b.left)/b.width*W),y=Math.floor((e.clientY-b.top)/b.height*H);let r=rmap[y*W+x];
+  if(r<0){let bd=1e9;REGINFO.forEach((g,i)=>{const d=Math.hypot(g.cx-x,g.cy-y);if(d<bd&&tapWaiter.set.has(i)){bd=d;r=d<60?i:r}})}
+  if(r>=0&&tapWaiter.set.has(r)){const w=tapWaiter;tapWaiter=null;w.res(r)}});
+const waitRegionTap=set=>new Promise(res=>{tapWaiter={set:new Set(set),res}});
+
+/* overlay */
+const ov=$('#ov'),card=$('#card');let ovRerender=null;
+function showCard(html){card.innerHTML=html;ov.hidden=false}
+function hideCard(){ov.hidden=true;card.innerHTML='';ovRerender=null}
+function waitOrTap(ms){return new Promise(res=>{let done=false;const h=()=>fin();const fin=()=>{if(done)return;done=true;clearTimeout(tm);ov.removeEventListener('click',h);res()};const tm=setTimeout(fin,ms);setTimeout(()=>{if(!done)ov.addEventListener('click',h)},300)})}
+function timer(ms,bar){let stop=false,t0=performance.now();const p=new Promise(res=>{function tick(n){if(stop)return;const f=Math.min(1,(n-t0)/ms);if(bar)bar.style.transform=`scaleX(${1-f})`;if(f>=1)return res('timeout');requestAnimationFrame(tick)}requestAnimationFrame(tick)});return{p,cancel(){stop=true},el(){return(performance.now()-t0)/1000}}}
+const chip=c=>`<span class="chip" style="--k:${CAT[c].c}">${T(CAT[c].n)}</span>`;
+const dot=pid=>`<i style="--c:${G.players[pid].color}" title="${esc(pname(pid))}"></i>`;
+function resLine(pids,res){return `<div class="res">${pids.map(p=>`<span><i class="d" style="--c:${G.players[p].color}"></i>${esc(pname(p))} <b class="${res[p]?'y':'n'}">${res[p]?t('correct'):t('wrong')}</b></span>`).join('')}</div>`}
+
+/* ===================== question flows ===================== */
+async function askMC(q,pids,ctxHtml){
+  const human=pids.includes(0);
+  const opts=shuffle(q.a.map((a,i)=>({a,ok:i===0})));const okIdx=opts.findIndex(o=>o.ok);
+  const bot={};pids.filter(p=>p!==0).forEach(p=>{const ok=Math.random()<accOf(p,q.c);let idx=okIdx;if(!ok){const w=[0,1,2,3].filter(i=>i!==okIdx);idx=w[Math.floor(Math.random()*3)]}bot[p]=idx});
+  showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${ctxHtml}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div>
+   <div class="opts">${opts.map((o,i)=>`<button class="opt" data-i="${i}" ${human?'':'disabled'}><span class="l">${'ABCD'[i]}</span><span class="tx">${esc(T(o.a))}</span><span class="who"></span></button>`).join('')}</div><div id="foot"></div>`);
+  let hi=null;
+  if(human){const tm=timer(15000,$('#tb'));await Promise.race([tm.p,new Promise(res=>card.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{hi=+b.dataset.i;b.classList.add('pick');res()}))]);tm.cancel()}
+  else{const tm=timer(1600,$('#tb'));await tm.p}
+  card.querySelectorAll('.opt').forEach((b,i)=>{b.disabled=true;if(i===okIdx)b.classList.add('ok');else if(i===hi)b.classList.add('no');
+    const w=pids.filter(p=>(p===0?hi:bot[p])===i);b.querySelector('.who').innerHTML=w.map(dot).join('')});
+  const res={};pids.forEach(p=>res[p]=p===0?hi===okIdx:bot[p]===okIdx);
+  $('#foot').innerHTML=(human&&hi==null?`<div class="hint">${t('timeout')}</div>`:'')+resLine(pids,res)+`<div class="hint">${t('tapSkip')}</div>`;
+  await waitOrTap(human?2600:1900);return res;
+}
+async function askOrder(q,pids,ctxHtml){
+  const human=pids.includes(0);const items=shuffle(q.items.map((it,i)=>({it,i})));
+  const res={};pids.filter(p=>p!==0).forEach(p=>res[p]=Math.random()<accOf(p,q.c)*.85);
+  showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${ctxHtml}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div>
+   <div class="hint" style="text-align:left">${t('order')} · ${t('orderHint')}</div>
+   <div class="ord">${items.map((o,k)=>`<button class="oi" data-k="${k}" ${human?'':'disabled'}><span class="n"></span><span>${esc(T(o.it))}</span></button>`).join('')}</div>
+   ${human?`<button class="ghost" id="rs">${t('reset')}</button>`:''}<div id="foot"></div>`);
+  let seq=[];
+  if(human){const tm=timer(25000,$('#tb'));const btns=[...card.querySelectorAll('.oi')];
+    const upd=()=>btns.forEach(b=>{const p=seq.indexOf(+b.dataset.k);b.classList.toggle('set',p>=0);b.querySelector('.n').textContent=p>=0?p+1:''});
+    await Promise.race([tm.p,new Promise(res2=>{btns.forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(seq.includes(k))return;seq.push(k);upd();if(seq.length===items.length)res2()});$('#rs').onclick=()=>{seq=[];upd()}})]);tm.cancel();
+    res[0]=seq.length===items.length&&seq.every((k,pos)=>items[k].i===pos)}
+  else{const tm=timer(1800,$('#tb'));await tm.p}
+  card.querySelectorAll('.oi').forEach(b=>{const k=+b.dataset.k;b.disabled=true;b.querySelector('.n').textContent=items[k].i+1;b.classList.add('set');if(human)b.classList.add(seq.indexOf(k)===items[k].i?'ok':'no')});
+  const rs=$('#rs');if(rs)rs.remove();
+  $('#foot').innerHTML=resLine(pids,res)+`<div class="hint">${t('tapSkip')}</div>`;
+  await waitOrTap(human?3000:2000);return res;
+}
+async function askEst(q,pids,label,ctxHtml){
+  const human=pids.includes(0);const year=q.u==='y';const unit=year?'':q.u;
+  const guesses={};
+  pids.filter(p=>p!==0).forEach(p=>{const a=accOf(p,q.c);let g=year?Math.round(q.v+gauss()*(12+(1-a)*90)):Math.round(q.v*Math.max(.05,1+gauss()*(.06+(1-a)*.32)));guesses[p]={v:Math.max(0,g),tm:rnd(3,11)}});
+  let val='';
+  showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${label}${ctxHtml?' · '+ctxHtml:''}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div><div id="body">
+   ${human?`<div class="disp" id="disp">&nbsp;</div><div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button data-n="del" aria-label="del">⌫</button><button data-n="0">0</button><button class="go" data-n="go">${t('send')}</button></div><div class="hint">${t('estHint')}</div>`:`<div class="hint">${t('estHint')}</div>`}</div>`);
+  if(human){const tm=timer(15000,$('#tb'));const disp=$('#disp');
+    const upd=()=>disp.innerHTML=(val?esc(fmtN(+val,year)):'&nbsp;')+(unit?`<span class="u">${esc(unit)}</span>`:'');upd();
+    await Promise.race([tm.p,new Promise(res=>card.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>{const n=b.dataset.n;if(n==='go'){if(val)res()}else if(n==='del')val=val.slice(0,-1);else if(val.length<9)val=(val==='0'?'':val)+n;upd()}))]);
+    guesses[0]={v:val===''?null:+val,tm:tm.el()};tm.cancel()}
+  else{const tm=timer(1700,$('#tb'));await tm.p}
+  const rank=pids.slice().sort((a,b)=>{const da=guesses[a].v==null?Infinity:Math.abs(guesses[a].v-q.v),db=guesses[b].v==null?Infinity:Math.abs(guesses[b].v-q.v);return da-db||guesses[a].tm-guesses[b].tm});
+  $('#body').innerHTML=`<div class="truth"><div class="lb">${t('answer')}</div><div class="v">${fmtN(q.v,year)}${unit?` <span style="font-size:1rem;color:var(--muted)">${esc(unit)}</span>`:''}</div></div>
+   <div class="rows">${rank.map((p,k)=>{const g=guesses[p];return `<div class="row${k===0?' first':''}" style="--c:${G.players[p].color}"><span class="rk">${k+1}</span><span>${esc(pname(p))}</span><span class="g">${g.v==null?t('noAnswer'):fmtN(g.v,year)}</span><span class="df">${g.v==null?'':t('diff')+' '+fmtN(Math.abs(g.v-q.v),year)} · ${g.tm.toFixed(1)}s</span></div>`}).join('')}</div><div class="hint">${t('tapSkip')}</div>`;
+  await waitOrTap(human?3400:2400);return rank;
+}
+
+/* ===================== game flow ===================== */
+function allowedFor(pid){const free=new Set(freeR());const adj=new Set();owned(pid).forEach(r=>ADJ[r].forEach(n=>{if(free.has(n))adj.add(n)}));return adj.size?[...adj]:[...free]}
+function targetsFor(pid){const s=new Set();owned(pid).forEach(r=>ADJ[r].forEach(n=>{const o=G.regions[n].owner;if(o>=0&&o!==pid&&G.players[o].alive)s.add(n)}));return [...s]}
+function setActive(pid){G.active=pid;renderPlayers()}
+async function pickRegion(pid,left){
+  const allowed=allowedFor(pid);if(!allowed.length)return;setActive(pid);
+  let r;
+  if(pid===0){setStatus(()=>[left>1?t('pick2'):t('pick1'),t('pickHint')]);setHL(allowed);scrollToRegions(allowed);r=await waitRegionTap(allowed)}
+  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);setHL(allowed);await sleep(650);
+    const P=G.players[pid];r=allowed.map(i=>({i,s:P.p[G.regions[i].cat]+ADJ[i].filter(n=>G.regions[n].owner<0).length*.04+Math.random()*.25})).sort((a,b)=>b.s-a.s)[0].i;
+    setHL([],r);await sleep(450)}
+  G.regions[r].owner=pid;clearHL();redrawAll();toast(t('picked',{p:pname(pid),r:G.regions[r].name}));
+}
+async function duel(a,d,ri){
+  const R=G.regions[ri];const q=nextDuel(R.cat);
+  const ctxH=`<b style="color:${G.players[a].color}">${esc(pname(a))}</b> → <b style="color:${G.players[d].color}">${esc(pname(d))}</b> · ${esc(R.name)}${R.castle?' · '+t('castle'):''}`;
+  const res=q.type==='ord'?await askOrder(q,[a,d],ctxH):await askMC(q,[a,d],ctxH);
+  if(res[a]&&!res[d])return 'att';if(res[d]&&!res[a])return 'def';if(!res[a]&&!res[d])return 'none';
+  toast(t('tie'));const rk=await askEst(nextEst(),[a,d],t('tiebreak'),ctxH);return rk[0]===a?'att':'def';
+}
+async function attackTurn(pid){
+  setActive(pid);const tg=targetsFor(pid);
+  if(!tg.length){setStatus(()=>[t('noTarget',{p:pname(pid)}),'']);await sleep(900);return}
+  let ri;
+  if(pid===0){setStatus(()=>[t('yourTurn'),t('attackHint')]);setHL(tg);scrollToRegions(tg);ri=await waitRegionTap(tg)}
+  else{setStatus(()=>[t('botTurn',{p:pname(pid)}),'']);setHL(tg);await sleep(700);const P=G.players[pid];
+    ri=tg.map(i=>{const R=G.regions[i];const da=accOf(R.owner,R.cat);let s=P.p[R.cat]-da*.8+R.value/2000+Math.random()*.25;if(R.castle)s+=(3-R.towers)*.25-.35;return{i,s}}).sort((x,y)=>y.s-x.s)[0].i}
+  setHL([],ri);scrollToRegions([ri]);await sleep(500);
+  const R=G.regions[ri],d=R.owner;
+  if(R.castle){
+    while(R.towers>0){const o=await duel(pid,d,ri);hideCard();
+      if(o==='att'){R.towers--;redrawAll();if(R.towers>0){toast(t('tower',{r:R.name,n:R.towers}));await sleep(900)}}
+      else{if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:R.name}))}else toast(t('none',{r:R.name}));redrawAll();break}}
+    if(R.towers===0){G.regions.forEach(x=>{if(x.owner===d)x.owner=pid});R.castle=false;G.players[d].alive=false;redrawAll();toast(t('fell',{a:pname(pid),d:pname(d)}));setStatus(()=>[t('fell',{a:pname(pid),d:pname(d)}),'']);await sleep(1600)}
+  }else{
+    const o=await duel(pid,d,ri);hideCard();
+    if(o==='att'){R.owner=pid;toast(t('took',{a:pname(pid),r:R.name}))}else if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:R.name}))}else toast(t('none',{r:R.name}));
+    redrawAll();
+  }
+  clearHL();await sleep(900);
+}
+async function run(){
+  newGame();redrawAll();renderPhase();
+  G.phase='expand';
+  while(freeR().length){G.round++;renderPhase();setActive(-1);setStatus(()=>[t('waitExpand'),'']);await sleep(500);
+    const rk=await askEst(nextEst(),alive(),t('est'),t('all'));hideCard();
+    for(const [pid,n] of [[rk[0],2],[rk[1],1]])for(let k=0;k<n;k++){if(!freeR().length)break;await pickRegion(pid,n-k)}
+  }
+  G.phase='war';
+  for(let rd=1;rd<=4;rd++){G.round=rd;renderPhase();const order=[0,1,2].map(k=>(k+rd-1)%3);
+    for(const pid of order){if(!G.players[0].alive||alive().length<2)break;if(G.players[pid].alive)await attackTurn(pid)}
+    if(!G.players[0].alive||alive().length<2)break}
+  G.phase='end';setActive(-1);renderPhase();showEnd();
+}
+function showEnd(){
+  const rk=[0,1,2].sort((a,b)=>(G.players[b].alive-G.players[a].alive)||score(b)-score(a));
+  const draw=()=>{const head=!G.players[0].alive?t('youLost'):rk[0]===0?t('win'):t('lose',{p:pname(rk[0])});
+    showCard(`<div class="endt">${esc(head)}</div><div class="rows">${rk.map((p,k)=>`<div class="row${k===0?' first':''}" style="--c:${G.players[p].color}"><span class="rk">${k+1}</span><span>${esc(pname(p))}${G.players[p].alive?'':' · '+t('out')}</span><span class="g">${fmtN(score(p))}</span><span class="df">${t('score')}</span></div>`).join('')}</div><button class="cta" id="again">${t('again')}</button>`);
+    $('#again').onclick=()=>{hideCard();run()}};
+  ovRerender=draw;draw();setStatus(()=>[t('final'),'']);
+}
+function showStart(){
+  const draw=()=>{showCard(`<div class="cardtop"><div class="hero"><h1>PUSULA</h1><p>${t('tag')}</p><p class="qu">“${t('quote')}”<span>— Atatürk</span></p></div><div class="langs">${LANGS.map(l=>`<button data-l="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join('')}</div></div>
+    <ol class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li><li>${t('r5')}</li></ol><button class="cta" id="go">${t('start')}</button>`);
+    $('#go').onclick=()=>{hideCard();run()}};
+  ovRerender=draw;draw();
+}
+
+/* ===================== boot ===================== */
+document.documentElement.lang=lang;
+buildMap();renderLangs();$('#sub').textContent=t('sub');renderLegend();renderZoom();renderPhase();
+newGame();
+document.fonts.load('600 27px "IBM Plex Sans"').catch(()=>{}).then(()=>document.fonts.ready).then(()=>{redrawAll()});
+redrawAll();
+showStart();
+</script>
