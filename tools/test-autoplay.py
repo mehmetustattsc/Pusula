@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 URL = (ROOT / 'index.html').as_uri() + '#auto'
-MAPS, MODES = ['tr', 'de', 'eu'], ['classic', 'quick', 'football']
+MAPS, MODES = ['tr', 'de', 'eu', 'asia'], ['classic', 'quick', 'football']
 combos = [tuple(a.split(':')) for a in sys.argv[1:]] or [(m, md, 'normal') for m in MAPS for md in MODES]
 
 fails = 0

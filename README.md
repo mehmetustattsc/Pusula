@@ -8,13 +8,16 @@ Bil ve Fethet (Triviador) kalıbında bir **bilgi + strateji + bulmaca** oyunu. 
 
 Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerektirmez.
 
-- **3 harita:** Türkiye (19 bölge), Almanya (20 şehir), Avrupa (26 ülke); her oyuncunun 3 kuleli bir kalesi
+- **4 harita:** Türkiye (19 bölge), Almanya (20 şehir), Avrupa (26 ülke), Uzak Doğu (26 bölge); her oyuncunun 3 kuleli bir kalesi
+- **Haritaya özel sorular:** Her haritanın kendi kültürüne ait soruları o haritada daha sık gelir (ör. Uzak Doğu'da Japonya, Çin, Kore soruları)
 - **3 mod:** Klasik (4 savaş turu), Hızlı maç (2 tur, seri tempo), Futbol Gecesi (özel etkinlik: her soru futbol)
 - **Bot gücü:** Kolay, Normal, Zor
 - **6 kategori:** Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür (+ etkinlik kategorisi Futbol)
 - **3 dil:** Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
-- **2 bot** (Ayla, Kaan), her oyunda rastgele güçlü/zayıf kategorileriyle
-- **311 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası
+- **10 kişilik bot kadrosu:** Her karakterin sabit güçlü/zayıf kategorisi, futbol bilgisi ve saldırganlığı var; her oyunda ikisi rakip olur
+- **411 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası; görülen sorular oyunlar arasında hatırlanır, tekrar azalır
+- **Harita görüntüleyici:** parmakla kaydırma, iki parmakla yakınlaştırma, sıra gelince otomatik odaklanma
+- **Sıra duyuruları:** "Sıra sende!", "Ayla saldırıyor" gibi ekran ortası mesajlar
 - **İpucu jokeri** (oyun başına 3), doğru cevap serisi, oyun sonunda kategori karnesi, kısa ses efektleri
 
 ## Proje yapısı
@@ -23,12 +26,14 @@ Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerek
 index.html            sayfa iskeleti, dosyaları sırayla yükler
 css/style.css         tasarım (renkler, yazı tipleri, yerleşim)
 data/questions.js     SORU BANKASI — yeni sorular buraya eklenir
-data/maps.js          HARİTALAR — kara sınırları, bölge merkezleri, kaleler
+data/maps.js          HARİTALAR — kara sınırları, bölge merkezleri, kaleler, tema
+data/bots.js          BOT KADROSU — isim, ünvan, renk, güçlü/zayıf kategori, tarz
 js/util.js            küçük yardımcılar
 js/i18n.js            arayüz metinleri (tr/de/en)
 js/sound.js           kısa ses efektleri (dosyasız, Web Audio)
 js/questions.js       soru havuzu: tekrar etmeden soru seçme
 js/map.js             harita oluşturma, bölgeler, komşuluklar, çizim
+js/view.js            harita görüntüleyici: kaydırma, yakınlaştırma, odaklanma, dokunma
 js/state.js           ayarlar, modlar, oyun durumu, bot profilleri, puan
 js/ui.js              oyuncu kartları, durum satırı, harita dokunuşları
 js/ask.js             soru ekranları: çoktan seçmeli, tahmin, sıralama
@@ -58,6 +63,7 @@ Geliştirirken: adresin sonuna `#auto` eklenirse (`index.html#auto`) oyun kendi 
 - Kategori kodları: `hist` Tarih, `geo` Coğrafya, `sci` Bilim, `spo` Spor, `art` Sanat, `gen` Genel Kültür, `fb` Futbol (etkinlik).
 - Dile göre değişmeyen seçenekler (isimler, sayılar) düz metin olabilir; değişenler `{tr,de,en}` olarak yazılır.
 - Bir sorunun `id`'si bir kez verildikten sonra değiştirilmez (ileride istatistikler ve online mod buna bağlanacak).
+- Haritaya özel bir soru için `m` alanı eklenir: `m:"asia"`, `m:"tr"`, `m:"de"`, `m:"eu"`. Bu sorular o haritada %50 öncelikle gelir, diğer haritalarda normal sorular arasında yer alır.
 
 Ekledikten sonra kontrol et:
 
@@ -100,8 +106,10 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [x] Almanya ve Avrupa haritaları
 - [x] Oyun modları (Klasik, Hızlı maç, Futbol Gecesi) ve bot gücü
 - [x] İpucu jokeri, seriler, kategori karnesi, sesler
-- [ ] Soru bankasını büyütmek (şu an kategori başına ~35, hedef 100+)
+- [x] Uzak Doğu haritası ve haritaya özel sorular
+- [x] Bot kadrosu, sıra duyuruları, harita yakınlaştırma, yeni tasarım
+- [ ] Soru bankasını büyütmek (şu an kategori başına ~45, hedef 100+)
 - [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak
 - [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda
 - [ ] Telefona uygulama olarak paketleme
-- [ ] Yeni haritalar (Dünya) ve özel etkinlikler (Osmanlı, Fizik…)
+- [ ] Yeni haritalar (Dünya, Amerika, Orta Doğu, Afrika…) ve özel etkinlikler (Osmanlı, Fizik…)
