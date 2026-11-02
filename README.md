@@ -8,11 +8,14 @@ Bil ve Fethet (Triviador) kalıbında bir **bilgi + strateji + bulmaca** oyunu. 
 
 Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerektirmez.
 
-- Türkiye haritası, 19 bölge, her oyuncunun 3 kuleli bir kalesi
-- 6 kategori: Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür
-- 3 dil: Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
-- 2 bot (Ayla, Kaan), her oyunda rastgele güçlü/zayıf kategorileriyle
-- Yaklaşık 95 soru: çoktan seçmeli, tahmin ve sıralama bulmacası
+- **3 harita:** Türkiye (19 bölge), Almanya (20 şehir), Avrupa (26 ülke); her oyuncunun 3 kuleli bir kalesi
+- **3 mod:** Klasik (4 savaş turu), Hızlı maç (2 tur, seri tempo), Futbol Gecesi (özel etkinlik: her soru futbol)
+- **Bot gücü:** Kolay, Normal, Zor
+- **6 kategori:** Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür (+ etkinlik kategorisi Futbol)
+- **3 dil:** Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
+- **2 bot** (Ayla, Kaan), her oyunda rastgele güçlü/zayıf kategorileriyle
+- **311 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası
+- **İpucu jokeri** (oyun başına 3), doğru cevap serisi, oyun sonunda kategori karnesi, kısa ses efektleri
 
 ## Proje yapısı
 
@@ -20,19 +23,24 @@ Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerek
 index.html            sayfa iskeleti, dosyaları sırayla yükler
 css/style.css         tasarım (renkler, yazı tipleri, yerleşim)
 data/questions.js     SORU BANKASI — yeni sorular buraya eklenir
+data/maps.js          HARİTALAR — kara sınırları, bölge merkezleri, kaleler
 js/util.js            küçük yardımcılar
 js/i18n.js            arayüz metinleri (tr/de/en)
+js/sound.js           kısa ses efektleri (dosyasız, Web Audio)
 js/questions.js       soru havuzu: tekrar etmeden soru seçme
-js/map.js             Türkiye haritası, bölgeler, komşuluklar, çizim
-js/state.js           oyun durumu, oyuncular, bot profilleri, puan
+js/map.js             harita oluşturma, bölgeler, komşuluklar, çizim
+js/state.js           ayarlar, modlar, oyun durumu, bot profilleri, puan
 js/ui.js              oyuncu kartları, durum satırı, harita dokunuşları
 js/ask.js             soru ekranları: çoktan seçmeli, tahmin, sıralama
 js/game.js            oyun akışı: yayılma, savaş, kale, oyun sonu
 tools/check-questions.js   soru bankası doğrulayıcı
-tools/build.js             tek dosyalık sürüm üretir (dist/pusula.html)
+tools/build.js             tek dosyalık sürüm üretir (dist/pusula.html, dist/pusula-embed.html)
+tools/test-autoplay.py     bütün harita ve modlarda otomatik tam oyun testi
 ```
 
 Oyunu çalıştırmak için `index.html` dosyasını tarayıcıda açmak yeterli.
+
+Geliştirirken: adresin sonuna `#auto` eklenirse (`index.html#auto`) oyun kendi kendine, çok hızlı oynar. `tools/test-autoplay.py` bunu kullanarak bütün kombinasyonları dener.
 
 ## Soru eklemek
 
@@ -47,7 +55,7 @@ Oyunu çalıştırmak için `index.html` dosyasını tarayıcıda açmak yeterli
 {id:"art-ord-003",c:"art",q:{tr:"…",de:"…",en:"…"},items:["1.","2.","3.","4."]},
 ```
 
-- Kategori kodları: `hist` Tarih, `geo` Coğrafya, `sci` Bilim, `spo` Spor, `art` Sanat, `gen` Genel Kültür.
+- Kategori kodları: `hist` Tarih, `geo` Coğrafya, `sci` Bilim, `spo` Spor, `art` Sanat, `gen` Genel Kültür, `fb` Futbol (etkinlik).
 - Dile göre değişmeyen seçenekler (isimler, sayılar) düz metin olabilir; değişenler `{tr,de,en}` olarak yazılır.
 - Bir sorunun `id`'si bir kez verildikten sonra değiştirilmez (ileride istatistikler ve online mod buna bağlanacak).
 
@@ -58,10 +66,14 @@ node tools/check-questions.js   # eksik dil, yanlış seçenek sayısı, tekrar 
 node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
 ```
 
+## Harita eklemek
+
+`data/maps.js` içine yeni bir harita nesnesi eklenir: sınır kutusu, kara çokgenleri (boylam, enlem), bölge merkezleri ve başlangıç kalesi üçlüleri. Bölge sınırları merkezlerden otomatik hesaplanır; uzun ülkelere (İtalya, Norveç gibi) ek merkez noktaları verilebilir. Ada ↔ kıta gibi deniz aşırı komşuluklar `seaLinks` ile tanımlanır. Başlangıç ekranı yeni haritayı kendiliğinden listeler.
+
 ## Oyun kuralları
 
 1. **Yayılma:** Herkes aynı tahmin sorusunu cevaplar. En yakın tahmin 2, ikinci 1 bölge seçer. Sadece kendi topraklarına komşu boş bölgeler seçilebilir.
-2. **Savaş (4 tur):** Oyuncular sırayla komşu bir düşman bölgesine saldırır. Soru, saldırılan bölgenin kategorisinden gelir.
+2. **Savaş (Klasik'te 4, Hızlı maçta 2 tur):** Oyuncular sırayla komşu bir düşman bölgesine saldırır. Soru, saldırılan bölgenin kategorisinden gelir.
    - Yalnız saldıran bilirse bölgeyi alır.
    - Yalnız savunan bilirse bölge kalır ve değeri +100 artar.
    - İkisi de bilirse tahmin sorusu karar verir. İkisi de bilemezse hiçbir şey değişmez.
@@ -70,12 +82,14 @@ node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
 
 Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıraya dizmek).
 
+**İpucu jokeri:** Oyun başına 3 hak, soru başına en fazla bir kez. Çoktan seçmelide iki yanlış şıkkı siler, tahminde cevabın bulunduğu aralığı gösterir, sıralamada ilk öğeyi yerleştirir.
+
 ## Tasarım kararları
 
 - **Ana yapı kategoriler.** Dönemler (Sancak'taki gibi) ana sistem değil, ileride görsel tema veya özel etkinlik olarak gelebilir.
 - **Bölge = kategori.** Her bölgenin bir kategorisi var; strateji, rakibin zayıf olduğu kategorideki bölgelere saldırmak.
-- **Özel etkinlikler** (sonra): Futbol, Fizik, Osmanlı gibi dar konularda geçici modlar, kendi haritası ve ödülüyle.
-- **Haritalar** kategoriden bağımsız: Türkiye ile başlıyoruz, sonra Avrupa, Dünya vb.
+- **Özel etkinlikler:** Dar konularda geçici modlar. İlki Futbol Gecesi; Fizik, Osmanlı gibi yenileri aynı şekilde eklenir (`EVENT_CATS` + o kategoride sorular + `MODES` içinde bir mod).
+- **Haritalar** kategoriden bağımsız: Türkiye, Almanya, Avrupa; sırada Dünya vb.
 - **Çok dil:** Her soru tek kimlikle, üç dilde saklanır. Farklı dilde oynayan oyuncular aynı maçta aynı soruyu kendi dilinde görür. Dile bağlı kelime oyunlarından kaçınılır.
 
 ## Yol haritası
@@ -83,7 +97,11 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [x] Tarayıcı prototipi: sen + 2 bot, Türkiye haritası
 - [x] Soru bankasını ayrı veri dosyasına taşımak, doğrulayıcı eklemek
 - [x] Projeyi modüllere bölmek (harita, oyun mantığı, soru akışları, arayüz)
-- [ ] Soru bankasını büyütmek (kategori başına 100+ soru)
+- [x] Almanya ve Avrupa haritaları
+- [x] Oyun modları (Klasik, Hızlı maç, Futbol Gecesi) ve bot gücü
+- [x] İpucu jokeri, seriler, kategori karnesi, sesler
+- [ ] Soru bankasını büyütmek (şu an kategori başına ~35, hedef 100+)
+- [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak
 - [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda
 - [ ] Telefona uygulama olarak paketleme
-- [ ] Yeni haritalar ve özel etkinlikler
+- [ ] Yeni haritalar (Dünya) ve özel etkinlikler (Osmanlı, Fizik…)

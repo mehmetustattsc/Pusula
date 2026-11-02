@@ -61,7 +61,7 @@ async function askOrder(q,pids,ctxHtml){
 async function askEst(q,pids,label,ctxHtml){
   const human=pids.includes(0);const year=q.u==='y';const unit=year?'':q.u;
   const guesses={};
-  pids.filter(p=>p!==0).forEach(p=>{const a=accOf(p,q.c);let g=year?Math.round(q.v+gauss()*(12+(1-a)*90)):Math.round(q.v*Math.max(.05,1+gauss()*(.06+(1-a)*.32)));guesses[p]={v:Math.max(0,g),tm:rnd(3,11)}});
+  pids.filter(p=>p!==0).forEach(p=>{const a=accOf(p,q.c);let g=year?Math.round(q.v+gauss()*(15+(1-a)*110)):Math.round(q.v*Math.max(.05,1+gauss()*(.08+(1-a)*.42)));guesses[p]={v:Math.max(0,g),tm:rnd(3,11)}});
   let val='';
   showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${label}${ctxHtml?' · '+ctxHtml:''}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div><div id="body">
    ${human?`<div class="disp" id="disp">&nbsp;</div><div class="range" id="range" hidden></div><div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button data-n="del" aria-label="del">⌫</button><button data-n="0">0</button><button class="go" data-n="go">${t('send')}</button></div>${hintBtn()}<div class="hint">${t('estHint')}</div>`:`<div class="hint">${t('estHint')}</div>`}</div>`);
