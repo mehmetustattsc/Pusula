@@ -1,0 +1,55 @@
+/* ===================== i18n ===================== */
+const LANGS=['tr','de','en'];
+let lang='tr';
+try{const s=localStorage.getItem('pusula.lang');if(LANGS.includes(s))lang=s;else{const n=(navigator.language||'tr').slice(0,2);if(LANGS.includes(n))lang=n}}catch(e){}
+/* Çok dilli metin: düz metin ise aynen, {tr,de,en} ise seçili dilde; eksik dilde Türkçeye düşer */
+const T=x=>x&&typeof x==='object'?(x[lang]??x.tr):x;
+const S={
+tr:{sub:'prototip',quote:'Hayatta en hakiki mürşit ilimdir.',tag:'Bil, seç, fethet. Türkiye haritasında iki bota karşı bilgi ve strateji.',
+r1:'Yayılma: Herkes aynı tahmin sorusunu cevaplar. En yakın tahmin 2, ikinci 1 bölge seçer.',
+r2:'Savaş: Sırayla komşu bir bölgeye saldırırsın. Soru o bölgenin kategorisinden gelir.',
+r3:'İkiniz de bilirseniz tahmin sorusu karar verir. Savunulan bölge +100 değer kazanır.',
+r4:'Kaleyi almak için 3 kulesini de yık. Düşen kalenin bütün toprakları senin olur.',
+r5:'Botların güçlü ve zayıf kategorilerine göre saldır. 4 savaş turundan sonra en yüksek puan kazanır.',
+start:'Oyuna başla',again:'Tekrar oyna',expand:'Yayılma',war:'Savaş',round:'Tur',you:'Sen',strong:'Güçlü',weak:'Zayıf',out:'Elendi',castle:'Kale',
+est:'Tahmin',tiebreak:'Eşitlik bozucu',duel:'Düello',order:'Sıralama bulmacası',send:'Gönder',reset:'Sıfırla',answer:'Doğru cevap',diff:'fark',noAnswer:'cevap yok',
+pick2:'İki bölge seç',pick1:'Bir bölge seç',pickHint:'Parlayan bölgelerden birine dokun.',botPick:'{p} bölge seçiyor…',picked:'{p} → {r}',
+yourTurn:'Saldırı sırası sende',attackHint:'Parlayan bir düşman bölgesine dokun. Kategoriye ve rakibin zayıf yanına bak.',botTurn:'{p} saldırıyor',
+took:'{a}, {r} bölgesini aldı',held:'{d}, {r} bölgesini savundu (+100)',none:'İkisi de bilemedi. {r} el değiştirmedi.',tie:'İkisi de bildi, tahmin karar verecek',
+tower:'{r} kalesinde bir kule yıkıldı. Kalan: {n}',fell:'{a}, {d} kalesini fethetti!',noTarget:'{p} saldıracak komşu bulamadı.',
+score:'puan',tapSkip:'Devam etmek için dokun',correct:'doğru',wrong:'yanlış',timeout:'Süre doldu',legend:'Bölge kategorileri · harfler haritadaki rozetlerdir',
+zoomIn:'Yakınlaştır',zoomOut:'Tümünü gör',youLost:'Kalen düştü.',win:'Kazandın!',lose:'{p} kazandı',all:'Herkes',orderHint:'Öğelere doğru sırayla dokun.',
+estHint:'En yakın tahmin kazanır. Eşitlikte hızlı olan önde.',waitExpand:'Tahmin sorusu geliyor…',final:'Son durum'},
+de:{sub:'Prototyp',quote:'Der wahrste Wegweiser im Leben ist das Wissen.',tag:'Wissen, wählen, erobern. Wissen und Strategie auf der Türkei-Karte gegen zwei Bots.',
+r1:'Ausbreitung: Alle beantworten dieselbe Schätzfrage. Die beste Schätzung wählt 2 Gebiete, die zweitbeste 1.',
+r2:'Krieg: Reihum greifst du ein Nachbargebiet an. Die Frage kommt aus der Kategorie dieses Gebiets.',
+r3:'Wissen es beide, entscheidet eine Schätzfrage. Ein verteidigtes Gebiet gewinnt +100 Wert.',
+r4:'Für eine Burg musst du alle 3 Türme zerstören. Dann gehört dir das ganze Land des Gegners.',
+r5:'Greif dort an, wo die Bots schwach sind. Nach 4 Kriegsrunden gewinnt die höchste Punktzahl.',
+start:'Spiel starten',again:'Nochmal spielen',expand:'Ausbreitung',war:'Krieg',round:'Runde',you:'Du',strong:'Stark',weak:'Schwach',out:'Ausgeschieden',castle:'Burg',
+est:'Schätzfrage',tiebreak:'Stechen',duel:'Duell',order:'Sortierrätsel',send:'Senden',reset:'Zurücksetzen',answer:'Richtige Antwort',diff:'Abw.',noAnswer:'keine Antwort',
+pick2:'Wähle zwei Gebiete',pick1:'Wähle ein Gebiet',pickHint:'Tippe auf ein leuchtendes Gebiet.',botPick:'{p} wählt…',picked:'{p} → {r}',
+yourTurn:'Du greifst an',attackHint:'Tippe auf ein leuchtendes Feindgebiet. Achte auf Kategorie und Schwächen.',botTurn:'{p} greift an',
+took:'{a} erobert {r}',held:'{d} verteidigt {r} (+100)',none:'Beide lagen falsch. {r} bleibt, wie es war.',tie:'Beide richtig – die Schätzfrage entscheidet',
+tower:'Ein Turm der Burg {r} fällt. Übrig: {n}',fell:'{a} erobert die Burg von {d}!',noTarget:'{p} hat kein Ziel.',
+score:'Punkte',tapSkip:'Tippen zum Fortfahren',correct:'richtig',wrong:'falsch',timeout:'Zeit abgelaufen',legend:'Kategorien der Gebiete · die Kürzel stehen auf der Karte',
+zoomIn:'Vergrößern',zoomOut:'Ganze Karte',youLost:'Deine Burg ist gefallen.',win:'Du hast gewonnen!',lose:'{p} gewinnt',all:'Alle',orderHint:'Tippe die Einträge in der richtigen Reihenfolge an.',
+estHint:'Die nächste Schätzung gewinnt. Bei Gleichstand zählt die Zeit.',waitExpand:'Die Schätzfrage kommt…',final:'Endstand'},
+en:{sub:'prototype',quote:'The truest guide in life is knowledge.',tag:'Know, choose, conquer. Knowledge and strategy on the map of Türkiye against two bots.',
+r1:'Expansion: everyone answers the same estimate question. Closest picks 2 regions, second picks 1.',
+r2:'War: take turns attacking a neighbouring region. The question comes from that region\'s category.',
+r3:'If both answer right, an estimate question decides. A defended region gains +100 value.',
+r4:'To take a castle, knock down all 3 towers. All of the fallen player\'s land becomes yours.',
+r5:'Attack where the bots are weak. After 4 war rounds the highest score wins.',
+start:'Start game',again:'Play again',expand:'Expansion',war:'War',round:'Round',you:'You',strong:'Strong',weak:'Weak',out:'Out',castle:'Castle',
+est:'Estimate',tiebreak:'Tiebreaker',duel:'Duel',order:'Ordering puzzle',send:'Send',reset:'Reset',answer:'Correct answer',diff:'off by',noAnswer:'no answer',
+pick2:'Pick two regions',pick1:'Pick one region',pickHint:'Tap one of the glowing regions.',botPick:'{p} is picking…',picked:'{p} → {r}',
+yourTurn:'Your attack',attackHint:'Tap a glowing enemy region. Watch the category and your rival\'s weak spot.',botTurn:'{p} attacks',
+took:'{a} takes {r}',held:'{d} holds {r} (+100)',none:'Both missed. {r} stays put.',tie:'Both right – an estimate decides',
+tower:'A tower of {r} castle falls. Left: {n}',fell:'{a} conquers {d}\'s castle!',noTarget:'{p} has no target.',
+score:'pts',tapSkip:'Tap to continue',correct:'right',wrong:'wrong',timeout:'Time\'s up',legend:'Region categories · the letters are the map badges',
+zoomIn:'Zoom in',zoomOut:'Whole map',youLost:'Your castle fell.',win:'You win!',lose:'{p} wins',all:'Everyone',orderHint:'Tap the items in the right order.',
+estHint:'Closest guess wins. On a tie, the faster answer leads.',waitExpand:'Estimate question coming…',final:'Final standings'}
+};
+const t=(k,v)=>{let s=S[lang][k]??k;if(v)s=s.replace(/\{(\w+)\}/g,(m,x)=>v[x]);return s};
+

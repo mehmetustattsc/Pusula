@@ -6,13 +6,57 @@ Bil ve Fethet (Triviador) kalıbında bir **bilgi + strateji + bulmaca** oyunu. 
 
 ## Şu anki durum: prototip
 
-`index.html` tek dosyalık, tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerektirmez, dosyayı tarayıcıda açmak yeterli.
+Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerektirmez.
 
 - Türkiye haritası, 19 bölge, her oyuncunun 3 kuleli bir kalesi
 - 6 kategori: Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür
 - 3 dil: Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
 - 2 bot (Ayla, Kaan), her oyunda rastgele güçlü/zayıf kategorileriyle
 - Yaklaşık 95 soru: çoktan seçmeli, tahmin ve sıralama bulmacası
+
+## Proje yapısı
+
+```
+index.html            sayfa iskeleti, dosyaları sırayla yükler
+css/style.css         tasarım (renkler, yazı tipleri, yerleşim)
+data/questions.js     SORU BANKASI — yeni sorular buraya eklenir
+js/util.js            küçük yardımcılar
+js/i18n.js            arayüz metinleri (tr/de/en)
+js/questions.js       soru havuzu: tekrar etmeden soru seçme
+js/map.js             Türkiye haritası, bölgeler, komşuluklar, çizim
+js/state.js           oyun durumu, oyuncular, bot profilleri, puan
+js/ui.js              oyuncu kartları, durum satırı, harita dokunuşları
+js/ask.js             soru ekranları: çoktan seçmeli, tahmin, sıralama
+js/game.js            oyun akışı: yayılma, savaş, kale, oyun sonu
+tools/check-questions.js   soru bankası doğrulayıcı
+tools/build.js             tek dosyalık sürüm üretir (dist/pusula.html)
+```
+
+Oyunu çalıştırmak için `index.html` dosyasını tarayıcıda açmak yeterli.
+
+## Soru eklemek
+
+`data/questions.js` içindeki ilgili listeye bir satır ekle:
+
+```js
+// çoktan seçmeli: İLK seçenek doğru cevaptır, oyun karıştırarak gösterir
+{id:"geo-mc-011",c:"geo",q:{tr:"…",de:"…",en:"…"},a:["Doğru","Yanlış 1","Yanlış 2","Yanlış 3"]},
+// tahmin: v sayısal cevap, u birim ('y' = yıl, '' = birimsiz)
+{id:"sci-est-006",c:"sci",q:{tr:"…",de:"…",en:"…"},v:1234,u:"km"},
+// sıralama: öğeler DOĞRU sırada yazılır
+{id:"art-ord-003",c:"art",q:{tr:"…",de:"…",en:"…"},items:["1.","2.","3.","4."]},
+```
+
+- Kategori kodları: `hist` Tarih, `geo` Coğrafya, `sci` Bilim, `spo` Spor, `art` Sanat, `gen` Genel Kültür.
+- Dile göre değişmeyen seçenekler (isimler, sayılar) düz metin olabilir; değişenler `{tr,de,en}` olarak yazılır.
+- Bir sorunun `id`'si bir kez verildikten sonra değiştirilmez (ileride istatistikler ve online mod buna bağlanacak).
+
+Ekledikten sonra kontrol et:
+
+```
+node tools/check-questions.js   # eksik dil, yanlış seçenek sayısı, tekrar eden id vb.
+node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
+```
 
 ## Oyun kuralları
 
@@ -37,8 +81,9 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 ## Yol haritası
 
 - [x] Tarayıcı prototipi: sen + 2 bot, Türkiye haritası
-- [ ] Soru bankasını ayrı bir veri dosyasına taşımak ve büyütmek (kategori başına 100+ soru)
-- [ ] Projeyi modüllere bölmek (harita, oyun mantığı, soru akışları, arayüz)
+- [x] Soru bankasını ayrı veri dosyasına taşımak, doğrulayıcı eklemek
+- [x] Projeyi modüllere bölmek (harita, oyun mantığı, soru akışları, arayüz)
+- [ ] Soru bankasını büyütmek (kategori başına 100+ soru)
 - [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda
 - [ ] Telefona uygulama olarak paketleme
 - [ ] Yeni haritalar ve özel etkinlikler
