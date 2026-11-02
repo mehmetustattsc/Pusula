@@ -32,23 +32,30 @@ async function askMC(q,pids,ctxHtml){
   await waitOrTap(human?2600:spec(1600));return res;
 }
 
+/* Sıralama: öğelere sırayla dokun → numara alır. Numaralı öğeye tekrar dokunursan geri alınır
+   (sonrakiler bir kayar). Dördü de yerleşince "Onayla" ile gönderilir; süre biterse o anki sıra sayılır. */
 async function askOrder(q,pids,ctxHtml){
   const human=pids.includes(0);const items=shuffle(q.items.map((it,i)=>({it,i})));
   const res={};pids.filter(p=>p!==0).forEach(p=>res[p]=Math.random()<accOf(p,q.c)*.85);
   showCard(`<div class="qh">${chip(q.c)}<span class="ctx">${ctxHtml}</span></div><div class="timer"><i id="tb"></i></div><div class="qt">${esc(T(q.q))}</div>
-   <div class="hint" style="text-align:left">${t('order')} · ${t('orderHint')}</div>
-   <div class="ord">${items.map((o,k)=>`<button class="oi" data-k="${k}" ${human?'':'disabled'}><span class="n"></span><span>${esc(T(o.it))}</span></button>`).join('')}</div>
-   ${human?`<div class="row2"><button class="ghost" id="rs">${t('reset')}</button>${hintBtn()}</div>`:''}<div id="foot"></div>`);
+   <div class="hint" style="text-align:left">${t('order')} · ${human?t('orderHint'):''}</div>
+   <div class="ord">${items.map((o,k)=>`<button class="oi" data-k="${k}" ${human?'':'disabled'}><span class="n"></span><span class="ot">${esc(T(o.it))}</span></button>`).join('')}</div>
+   ${human?`<div class="row2"><button class="ghost" id="undo">${t('undo')}</button><button class="ghost" id="rs">${t('reset')}</button>${hintBtn()}<button class="cta sm" id="ok" disabled>${t('confirm')}</button></div>`:''}<div id="foot"></div>`);
   let seq=[],locked=-1;
   if(human){
-    const btns=[...card.querySelectorAll('.oi')];
-    const upd=()=>btns.forEach(b=>{const p=seq.indexOf(+b.dataset.k);b.classList.toggle('set',p>=0);b.querySelector('.n').textContent=p>=0?p+1:''});
+    const btns=[...card.querySelectorAll('.oi')],okB=$('#ok');
+    const upd=()=>{btns.forEach(b=>{const k=+b.dataset.k,p=seq.indexOf(k);b.classList.toggle('set',p>=0);b.classList.toggle('lock',k===locked);b.querySelector('.n').textContent=p>=0?p+1:''});
+      okB.disabled=seq.length!==items.length;$('#undo').disabled=seq.length<=(locked>=0?1:0)};
+    upd();
     if(AUTO){seq=Math.random()<.5?items.map((o,k)=>k).sort((a,b)=>items[a].i-items[b].i):shuffle(items.map((o,k)=>k))}
     else{const tm=timer(HUMAN_MS.ord,$('#tb'));
-      await Promise.race([tm.p,new Promise(res2=>{
-        useHint(()=>{locked=items.findIndex(o=>o.i===0);seq=[locked];btns[locked].classList.add('lock');upd()});
-        btns.forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(seq.includes(k))return;sfx('tap');seq.push(k);upd();if(seq.length===items.length)res2()});
-        $('#rs').onclick=()=>{seq=locked>=0?[locked]:[];upd()}})]);tm.cancel()}
+      await Promise.race([tm.p,new Promise(done=>{
+        useHint(()=>{locked=items.findIndex(o=>o.i===0);seq=[locked,...seq.filter(k=>k!==locked)];upd()});
+        btns.forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(k===locked)return;sfx('tap');
+          if(seq.includes(k))seq=seq.filter(x=>x!==k);else seq.push(k);upd()});
+        $('#undo').onclick=()=>{if(seq.length>(locked>=0?1:0)){seq.pop();sfx('tap');upd()}};
+        $('#rs').onclick=()=>{seq=locked>=0?[locked]:[];sfx('tap');upd()};
+        okB.onclick=()=>{if(seq.length===items.length)done()}})]);tm.cancel()}
     res[0]=seq.length===items.length&&seq.every((k,pos)=>items[k].i===pos)
   }else{const tm=timer(spec(1500)*SPEED,$('#tb'));await tm.p}
   card.querySelectorAll('.oi').forEach(b=>{const k=+b.dataset.k;b.disabled=true;b.querySelector('.n').textContent=items[k].i+1;b.classList.add('set');if(human)b.classList.add(seq.indexOf(k)===items[k].i?'ok':'no')});

@@ -90,9 +90,9 @@ function showEnd(){
 function seg(name,items,cur){return `<div class="seg" role="radiogroup" data-seg="${name}">${items.map(([v,l,d])=>`<button role="radio" data-v="${v}" aria-checked="${v===cur}"><b>${esc(l)}</b>${d?`<small>${esc(d)}</small>`:''}</button>`).join('')}</div>`}
 function showStart(){
   const draw=()=>{showCard(`<div class="cardtop"><div class="hero"><h1>PUSULA</h1><p>${t('tag')}</p><p class="qu">“${t('quote')}”<span>— Atatürk</span></p></div><div class="langs">${LANGS.map(l=>`<button data-l="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join('')}</div></div>
-    <div class="set"><div class="lt">${t('mapL')}</div>${seg('map',MAP_IDS.map(id=>[id,T(MAPS[id].name),t('regionsN',{n:MAPS[id].regions.length})]),SET.map)}</div>
-    <div class="set"><div class="lt">${t('modeL')}</div>${seg('mode',[['classic',t('mClassic'),t('mClassicD')],['quick',t('mQuick'),t('mQuickD')],['football',t('mFootball'),t('mFootballD')]],SET.mode)}</div>
-    <div class="set"><div class="lt">${t('diffL')}</div>${seg('diff',[['easy',t('dEasy')],['normal',t('dNormal')],['hard',t('dHard')]],SET.diff)}</div>
+    <div class="setgrp"><div class="lt">${t('mapL')}</div>${seg('map',MAP_IDS.map(id=>[id,T(MAPS[id].name),t('regionsN',{n:MAPS[id].regions.length})]),SET.map)}</div>
+    <div class="setgrp"><div class="lt">${t('modeL')}</div>${seg('mode',[['classic',t('mClassic'),t('mClassicD')],['quick',t('mQuick'),t('mQuickD')],['football',t('mFootball'),t('mFootballD')]],SET.mode)}</div>
+    <div class="setgrp"><div class="lt">${t('diffL')}</div>${seg('diff',[['easy',t('dEasy')],['normal',t('dNormal')],['hard',t('dHard')]],SET.diff)}</div>
     <button class="cta" id="go">${t('start')}</button>
     <details class="how"><summary>${t('how')}</summary><ol class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li><li>${t('r5')}</li><li>${t('r6',{n:HINTS_PER_GAME})}</li></ol></details>`);
     card.querySelectorAll('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{SET[g.dataset.seg]=b.dataset.v;saveSet();sfx('tap');
