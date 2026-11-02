@@ -1,3 +1,4 @@
+[hidden]{display:none!important}
 /* Layout: a war-room table — header, three player plaques, the map as the board, a status line, question cards rise as overlays */
 :root{
   --bg:#0A0F1A; --panel:#121A2B; --panel2:#18223A; --line:#26324C;
@@ -116,4 +117,32 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .rules li::before{content:counter(r);font-family:var(--mono);font-size:.75rem;color:var(--gold);border:1px solid #3a3320;border-radius:6px;height:22px;display:grid;place-items:center}
 .cardtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .endt{font-family:var(--display);font-stretch:118%;font-weight:900;font-size:1.8rem;line-height:1.05}
+/* sound toggle */
+.mute{background:none;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:.74rem;color:var(--muted)}
+.mute[aria-pressed="true"]{color:var(--fg)}
+/* hints */
+.hintb{align-self:flex-start;background:#1d1a10;border:1px solid #4a3f1c;color:var(--gold);border-radius:999px;padding:7px 14px;font-weight:600;font-size:.84rem}
+.hintb span{color:var(--muted);font-weight:500;margin-left:4px}
+.opt.gone{opacity:.25;text-decoration:line-through}
+.oi.lock{border-color:var(--gold)}
+.range{text-align:center;color:var(--gold);font-size:.86rem;font-weight:600}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row2 .cta{flex:1}
+/* start screen settings */
+.set{display:flex;flex-direction:column;gap:6px}
+.lt{text-transform:uppercase;letter-spacing:.1em;font-size:.66rem;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
+.seg button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:44px}
+.seg button b{font-weight:600;font-size:.88rem}
+.seg button small{color:var(--muted);font-size:.7rem;line-height:1.3}
+.seg button[aria-checked="true"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:#1f1d14}
+.how summary{cursor:pointer;color:var(--muted);font-size:.85rem;padding:4px 0}
+.how[open] summary{margin-bottom:8px}
+/* end report */
+.report{display:flex;flex-direction:column;gap:6px}
+.rep{display:grid;grid-template-columns:22px minmax(0,7.5em) 1fr auto;gap:8px;align-items:center;font-size:.84rem}
+.rep .bar{height:6px;background:var(--panel2);border-radius:6px;overflow:hidden}
+.rep .bar i{display:block;height:100%}
+.rep .rv{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.rep .rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.card{animation:none}.toast{transition:none}}

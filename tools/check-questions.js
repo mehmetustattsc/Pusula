@@ -2,7 +2,7 @@
 // Kontroller: benzersiz id, geçerli kategori, üç dilde metin, 4 seçenek / 4 öğe,
 // tekrar eden seçenek, sayısal tahmin cevabı. Sonunda kategori başına sayıları yazar.
 const path = require('path');
-const { CATS, QUESTIONS } = require(path.join(__dirname, '..', 'data', 'questions.js'));
+const { CATS, EVENT_CATS, QUESTIONS } = require(path.join(__dirname, '..', 'data', 'questions.js'));
 
 const LANGS = ['tr', 'de', 'en'];
 const errors = [];
@@ -27,7 +27,7 @@ for (const type of ['mc', 'est', 'ord']) {
     if (!q.id) errors.push(`${type}: id eksik`);
     else if (ids.has(q.id)) errors.push(`${q.id}: id tekrar ediyor`);
     ids.add(q.id);
-    if (!CATS.includes(q.c)) errors.push(`${w}: bilinmeyen kategori '${q.c}'`);
+    if (!CATS.includes(q.c) && !EVENT_CATS.includes(q.c)) errors.push(`${w}: bilinmeyen kategori '${q.c}'`);
     text(q.q, `${w} soru`);
     if (type === 'mc') {
       if (!Array.isArray(q.a) || q.a.length !== 4) errors.push(`${w}: tam 4 seçenek olmalı`);
@@ -47,7 +47,7 @@ for (const type of ['mc', 'est', 'ord']) {
 }
 
 console.log('Kategori       çoktan  tahmin  sıralama');
-for (const c of CATS) {
+for (const c of [...CATS, ...EVENT_CATS]) {
   const k = count[c] || { mc: 0, est: 0, ord: 0 };
   console.log(`${c.padEnd(14)} ${String(k.mc).padStart(6)}  ${String(k.est).padStart(6)}  ${String(k.ord).padStart(8)}`);
 }

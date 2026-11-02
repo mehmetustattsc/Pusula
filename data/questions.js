@@ -14,6 +14,9 @@ const CAT={
   art:{c:"#E879B9",n:{"tr":"Sanat","de":"Kunst","en":"Art"},ab:{"tr":"Sa","de":"Ku","en":"Ar"}},
   gen:{c:"#A3ADBD",n:{"tr":"Genel Kültür","de":"Allgemeinwissen","en":"General"},ab:{"tr":"GK","de":"AW","en":"GK"}}
 };
+/* Özel etkinlik kategorileri: haritada sadece ilgili mod seçilince kullanılır */
+const EVENT_CATS=["fb"];
+CAT.fb={c:"#B9E769",n:{"tr":"Futbol","de":"Fußball","en":"Football"},ab:{"tr":"Fu","de":"Fu","en":"Fb"}};
 const QUESTIONS={
 mc:[
   {id:"hist-mc-001",c:"hist",q:{"tr":"İstanbul hangi yıl fethedildi?","de":"In welchem Jahr wurde Konstantinopel erobert?","en":"In which year was Constantinople conquered?"},a:["1453","1071","1299","1517"]},
@@ -115,4 +118,4 @@ ord:[
   {id:"spo-ord-002",c:"spo",q:{"tr":"Yaz Olimpiyatlarını eskiden yeniye sırala","de":"Ordne die Sommerspiele von alt nach neu","en":"Order the Summer Olympics from oldest to newest"},items:[{"tr":"Seul","de":"Seoul","en":"Seoul"},{"tr":"Sidney","de":"Sydney","en":"Sydney"},{"tr":"Pekin","de":"Peking","en":"Beijing"},"Rio de Janeiro"]}
 ]
 };
-if(typeof module!=='undefined')module.exports={CATS,CAT,QUESTIONS};
+if(typeof module!=='undefined')module.exports={CATS,CAT,EVENT_CATS,QUESTIONS};
