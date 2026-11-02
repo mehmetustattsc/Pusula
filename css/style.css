@@ -209,6 +209,8 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .ot2>b{font-weight:900;font-size:.95rem;line-height:1.1}
 .ot2 small{color:var(--ink2);font-size:.7rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ot2 .sw{flex-wrap:wrap}
+.approw{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.approw .ghost{color:var(--ink);border-color:var(--edge-d);background:var(--paper)}
 .how summary{cursor:pointer;color:var(--ink2);font-size:.88rem;font-weight:800;padding:2px 0}
 .how[open] summary{margin-bottom:8px}
 .rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:r}

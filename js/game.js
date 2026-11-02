@@ -174,13 +174,14 @@ function showStart(){
     <div class="setgrp"><div class="lt ltrow"><span>${t('oppL')}</span><button class="link" id="reroll">${t('reroll')}</button></div>${seg('nOpp',[['2','2'],['3','3'],['4','4']],String(SET.nOpp))}<div class="opps">${SET.opps.map(oppCard).join('')}</div></div>
     <div class="setgrp"><div class="lt">${t('diffL')}</div>${seg('diff',[['easy',t('dEasy')],['normal',t('dNormal')],['hard',t('dHard')]],SET.diff)}</div>
     <button class="cta big" id="go">${t('start')}</button>
+    ${appRow()}
     <details class="how"><summary>${t('how')}</summary><ol class="rules"><li>${t('r1')}</li><li>${t('r2')}</li><li>${t('r3')}</li><li>${t('r4')}</li><li>${t('r5')}</li><li>${t('r6',{n:HINTS_PER_GAME,g:GOLD.hint})}</li><li>${t('r7',{w:GOLD.watchCorrect,o:GOLD.ownCorrect})}</li><li>${t('r8',{r:GOLD.repair,b:GOLD.backup})}</li></ol></details>`);
     card.querySelectorAll('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=g.dataset.seg;SET[k]=k==='nOpp'?+b.dataset.v:b.dataset.v;sfx('tap');
       g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b)));
       if(k==='nOpp'){SET.opps=pickOpps(SET.nOpp);card.querySelector('.opps').innerHTML=SET.opps.map(oppCard).join('')}
       saveSet();if(k==='map'||k==='nOpp')previewMap()}));
     $('#reroll').onclick=()=>{sfx('tap');let n,k=0;do{n=pickOpps(SET.nOpp)}while(n.join()===SET.opps.join()&&++k<20);SET.opps=n;saveSet();card.querySelector('.opps').innerHTML=SET.opps.map(oppCard).join('');previewMap()};
-    $('#go').onclick=()=>{sfx('tap');hideCard();run()}};
+    $('#go').onclick=()=>{sfx('tap');hideCard();run()};bindAppRow()};
   ovRerender=draw;draw();
 }
 /* başlangıç ekranının arkasında seçili haritayı göster */

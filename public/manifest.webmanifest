@@ -1,0 +1,18 @@
+{
+  "name": "Pusula",
+  "short_name": "Pusula",
+  "description": "Bil, seç, fethet. Haritada botlara karşı bilgi, strateji ve bulmaca.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2B1748",
+  "theme_color": "#2B1748",
+  "categories": ["games", "education", "trivia"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

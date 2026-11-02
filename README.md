@@ -4,6 +4,14 @@
 
 Bil ve Fethet (Triviador) kalıbında bir **bilgi + strateji + bulmaca** oyunu. Soruları bilerek harita üzerinde toprak kazanır, rakip kaleleri düşürürsün. Botlara karşı ve (ileride) gerçek oyuncularla karşılıklı oynanır.
 
+**Oyna:** https://mehmetustattsc.github.io/Pusula/
+
+Telefona uygulama olarak kurmak için:
+- **Android (Chrome):** Başlangıç ekranındaki **Ana ekrana ekle** düğmesine dokun (ya da tarayıcı menüsü → "Uygulamayı yükle").
+- **iPhone (Safari):** Paylaş düğmesi → **Ana Ekrana Ekle**.
+
+Kurulduktan sonra tam ekran açılır ve ilk açılıştan sonra internetsiz de çalışır. Başlangıç ekranındaki **Paylaş** düğmesi oyunun bağlantısını arkadaşlarına gönderir.
+
 ## Şu anki durum: prototip
 
 Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerektirmez.
@@ -47,11 +55,20 @@ js/game.js            oyun akışı: yayılma, savaş, kale, oyun sonu
 tools/check-questions.js   soru bankası doğrulayıcı
 tools/build.js             tek dosyalık sürüm üretir (dist/pusula.html, dist/pusula-embed.html)
 tools/test-autoplay.py     bütün harita ve modlarda otomatik tam oyun testi
+js/app.js                  uygulama: kurulum ("Ana ekrana ekle"), paylaşma, çevrimdışı çalışma
+public/                    uygulama dosyaları: manifest, service worker, ikonlar
+.github/workflows/pages.yml  her gönderimde test + derleme + GitHub Pages'e yayın
 ```
 
 Oyunu çalıştırmak için `index.html` dosyasını tarayıcıda açmak yeterli.
 
 Geliştirirken: adresin sonuna `#auto` eklenirse (`index.html#auto`) oyun kendi kendine, çok hızlı oynar. `tools/test-autoplay.py` bunu kullanarak bütün kombinasyonları dener.
+
+## Yayın
+
+Her `main` gönderiminde GitHub Actions soru bankasını denetler, oyunu derler (`node tools/build.js` → `web/`), dört haritada otomatik oyun testi çalıştırır ve testler geçerse `web/` klasörünü GitHub Pages'e yayınlar. Telefonlardaki kurulu uygulama bir sonraki açılışta yeni sürümü indirir.
+
+İlk kurulumda bir kez: depo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## Soru eklemek
 
@@ -135,5 +152,6 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [ ] Soru bankasını büyütmek (şu an kategori başına ~45, hedef 100+)
 - [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak
 - [ ] Online çok oyunculu mod: oda kodu ile arkadaşla oynama, eksik oyuncuyu bot doldurur; sorular ve cevap kontrolü sunucuda; düellodaki iki kişi dışındakiler izlerken cevap verip altın kazanır
-- [ ] Telefona uygulama olarak paketleme
+- [x] Telefona kurulabilir uygulama (PWA), GitHub Pages yayını, paylaş düğmesi
+- [ ] Play Store sürümü (Capacitor ile Android paketi)
 - [ ] Yeni haritalar (Dünya, Amerika, Orta Doğu, Afrika…) ve özel etkinlikler (Osmanlı, Fizik…)
