@@ -10,13 +10,14 @@ Tarayıcıda çalışan oynanabilir bir prototip. Bir sunucu ya da kurulum gerek
 
 - **4 harita:** Türkiye (19 bölge), Almanya (20 şehir), Avrupa (26 ülke), Uzak Doğu (26 bölge); her oyuncunun 3 kuleli bir kalesi
 - **Haritaya özel sorular:** Her haritanın kendi kültürüne ait soruları o haritada daha sık gelir (ör. Uzak Doğu'da Japonya, Çin, Kore soruları)
-- **3 mod:** Klasik (4 savaş turu), Hızlı maç (2 tur, seri tempo), Futbol Gecesi (özel etkinlik: her soru futbol)
+- **3 mod:** Klasik (6 savaş turu), Hızlı maç (3 tur, seri tempo), Futbol Gecesi (özel etkinlik: her soru futbol, 6 tur)
 - **Bot gücü:** Kolay, Normal, Zor
 - **6 kategori:** Tarih, Coğrafya, Bilim, Spor, Sanat, Genel Kültür (+ etkinlik kategorisi Futbol)
 - **3 dil:** Türkçe, Almanca, İngilizce (oyun içinde değiştirilebilir)
 - **10 kişilik bot kadrosu:** Her karakterin sabit güçlü/zayıf kategorisi, futbol bilgisi ve saldırganlığı var; her oyunda 2–4 tanesi rakip olur
 - **Altın:** Doğru cevaplarla, bölge alarak ve botları izlerken cevap vererek kazanılır; ipucu, kule onarımı ve yedek kale için harcanır
-- **İzleme hızı:** Botların kendi düellolarını 1x, 2x veya 4x hızda izleyebilirsin
+- **İzleme hızı:** Botların kendi düellolarını 1x (sakin), 2x veya 4x hızda izleyebilirsin; 1x ve 2x'te izlerken her soru türüne (çoktan seçmeli, sıralama, tahmin) cevap verip altın kazanabilirsin
+- **Sakin ekran:** Bildirimler sıraya girer ve okunacak kadar kalır; harita sadece seni ilgilendiren hamlelerde yaklaşır; bütün süreler `js/state.js` içindeki `TIMING` tablosunda
 - **"Biliyor muydun?" kartları:** Beklerken ekranın altında 86 niş bilgiden biri belirir; gördüğün bilgi aynı oyunda soru olarak gelebilir, bilirsen +10 altın bonus. Oyun sonunda "Bu oyunda öğrendiklerin" listesi
 - **411 soru:** çoktan seçmeli, tahmin ve sıralama bulmacası; görülen sorular oyunlar arasında hatırlanır, tekrar azalır
 - **Harita görüntüleyici:** parmakla kaydırma, iki parmakla yakınlaştırma, sıra gelince otomatik odaklanma
@@ -92,7 +93,7 @@ node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
 ## Oyun kuralları
 
 1. **Yayılma:** Herkes aynı tahmin sorusunu cevaplar. En yakın tahmin 2, ikinci 1 bölge seçer. Sadece kendi topraklarına komşu boş bölgeler seçilebilir.
-2. **Savaş (Klasik'te 4, Hızlı maçta 2 tur):** Oyuncular sırayla komşu bir düşman bölgesine saldırır. Soru, saldırılan bölgenin kategorisinden gelir.
+2. **Savaş (Klasik'te 6, Hızlı maçta 3 tur):** Oyuncular sırayla komşu bir düşman bölgesine saldırır. Soru, saldırılan bölgenin kategorisinden gelir.
    - Yalnız saldıran bilirse bölgeyi alır.
    - Yalnız savunan bilirse bölge kalır ve değeri +100 artar.
    - İkisi de bilirse tahmin sorusu karar verir. İkisi de bilemezse hiçbir şey değişmez.
@@ -101,7 +102,7 @@ node tools/build.js             # tek dosyalık sürüm: dist/pusula.html
 5. **Kule onarımı:** Yıkılan kuleler kalıcıdır; saldıran bir sonraki saldırısında kaldığı yerden devam eder. Savunan, kendi turunun başında bir kuleyi 40 altınla ya da bir sıralama bulmacasını doğru çözerek onarabilir (tur başına bir onarım).
 6. **Yedek kale:** 80 altınla kendi bölgelerinden birine yedek kale kurulabilir. Ana kale düşerse oyuncu elenmez: ana kale bölgesi saldırana geçer, yedek kale 2 kuleyle yeni ana kale olur.
 
-**Altın:** Oyuna 40 altınla başlanır. Kendi düellonda doğru cevap +10, botların düellosunu izlerken doğru cevap +15, yayılmada en yakın tahmin +10, bölge almak +10. İlk ipucu bedava, sonrakiler 30 altın.
+**Altın:** Oyuna 40 altınla başlanır. Kendi düellonda doğru cevap +10, botların düellosunu izlerken doğru cevap (tahminde botlardan daha yakın) +15, öğrendiğin bilgiden gelen soruyu bilmek +10 bonus, yayılmada en yakın tahmin +10, bölge almak +10. İlk ipucu bedava, sonrakiler 30 altın.
 
 **Oyuncu sayısı:** Sen + 2–4 bot. Kaleler haritada birbirinden olabildiğince uzak bölgelere otomatik yerleşir. 4 ve üzeri oyuncuda yayılmada üçüncü sıradaki de 1 bölge seçer.
 
@@ -129,6 +130,7 @@ Düelloların yaklaşık %30'u sıralama bulmacasıdır (öğeleri doğru sıray
 - [x] Bot kadrosu, sıra duyuruları, harita yakınlaştırma, yeni tasarım
 - [x] 2–4 rakip, izleme hızı, izlerken cevaplama, altın, kule onarımı, yedek kale
 - [x] "Biliyor muydun?" bilgi kartları (86 bilgi), öğrenilen bilginin soru olarak dönmesi
+- [x] Sakin tempo (merkezi TIMING), daha uzun oyun, izlerken her soru türünü cevaplama
 - [ ] Bilgi kartlarını büyütmek (hedef 300+, her harita için ayrı set)
 - [ ] Soru bankasını büyütmek (şu an kategori başına ~45, hedef 100+)
 - [ ] Bot dengesini gerçek oyun testlerine göre ayarlamak

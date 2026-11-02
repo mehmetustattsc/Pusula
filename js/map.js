@@ -97,7 +97,7 @@ function drawCastle(x,y,s,col,towers){
 function paint(now=performance.now()){
   if(!MAP)return;
   ctx.clearRect(0,0,W,H);ctx.drawImage(base,0,0);
-  if(hlSet.size||focus>=0){ctx.drawImage(dim,0,0);ctx.globalAlpha=reduced?.35:.18+.27*(Math.sin(now/240)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
+  if(hlSet.size||focus>=0){ctx.drawImage(dim,0,0);ctx.globalAlpha=reduced?.35:.22+.16*(Math.sin(now/520)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
   if(!G)return;
   if(flash){const p=(now-flash.t0)/900;if(p<1){const {cx,cy}=REGINFO[flash.i];ctx.beginPath();ctx.arc(cx,cy,30+p*110,0,Math.PI*2);ctx.strokeStyle=flash.color;ctx.globalAlpha=1-p;ctx.lineWidth=8*(1-p)+2;ctx.stroke();ctx.globalAlpha=1}}
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';

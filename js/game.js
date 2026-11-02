@@ -8,11 +8,11 @@ async function pickRegion(pid,left,first){
   const allowed=allowedFor(pid);if(!allowed.length)return;setActive(pid);
   let r;
   if(pid===0){setStatus(()=>[left>1?t('pick2'):t('pick1'),t('pickHint')]);setHL(allowed);focusOn(allowed);
-    if(first)await banner(t('bYourPick'),left>1?t('pick2'):t('pick1'),YOU_COLOR,1000,true);
+    if(first)await banner(t('bYourPick'),left>1?t('pick2'):t('pick1'),YOU_COLOR,TIMING.bannerYou,true);
     r=await waitRegionTap(allowed);sfx('tap')}
-  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);showFact();setHL(allowed);await sleep(550*pace());
+  else{setStatus(()=>[t('botPick',{p:pname(pid)}),'']);showFact();setHL(allowed);await sleep(tm('botThink'));
     const P=G.players[pid];r=allowed.map(i=>({i,s:P.p[G.regions[i].cat]+ADJ[i].filter(n=>G.regions[n].owner<0).length*.04+Math.random()*.25})).sort((a,b)=>b.s-a.s)[0].i;
-    setHL([],r);await sleep(400*pace())}
+    setHL([],r);await sleep(tm('botChosen'))}
   G.regions[r].owner=pid;clearHL();redrawAll();flashRegion(r,G.players[pid].color);toast(t('picked',{p:pname(pid),r:rn(r)}));
 }
 
@@ -44,7 +44,7 @@ async function repairByPuzzle(pid){
   else toast(t('repairFail'));
 }
 function repairByGold(pid){const R=myCastle(pid);addGold(pid,-GOLD.repair);R.towers=Math.min(3,R.towers+1);redrawAll();flashRegion(G.players[pid].castle,G.players[pid].color);toast(t('repaired',{p:pname(pid),n:R.towers}))}
-async function buildBackup(pid,ri){const P=G.players[pid];addGold(pid,-GOLD.backup);P.backup=ri;redrawAll();flashRegion(ri,P.color);toast(t('backupBuilt',{p:pname(pid),r:rn(ri)}));if(pid!==0)await sleep(700*pace())}
+async function buildBackup(pid,ri){const P=G.players[pid];addGold(pid,-GOLD.backup);P.backup=ri;redrawAll();flashRegion(ri,P.color);toast(t('backupBuilt',{p:pname(pid),r:rn(ri)}));if(pid!==0)await sleep(tm('botChosen'))}
 
 async function preTurn(pid){
   const P=G.players[pid],R=myCastle(pid),hurt=R.towers<3;
@@ -68,7 +68,7 @@ async function preTurn(pid){
     return;
   }
   /* bot: hasarlıysa önce altınla, yoksa bulmacayla onarır; tehlikedeyse ya da zenginse yedek kale kurar */
-  if(hurt){if(P.gold>=GOLD.repair)repairByGold(pid);else if(Math.random()<.6)await repairByPuzzle(pid);await sleep(400*pace())}
+  if(hurt){if(P.gold>=GOLD.repair)repairByGold(pid);else if(Math.random()<.6)await repairByPuzzle(pid);await sleep(tm('botChosen'))}
   if(canBuild(pid)&&(R.towers<3||P.gold>=GOLD.backup+40||Math.random()<.35)){
     const spot=backupSpots(pid).map(i=>({i,s:-ADJ[i].filter(n=>G.regions[n].owner>=0&&G.regions[n].owner!==pid).length+Math.random()*.5})).sort((x,y)=>y.s-x.s)[0].i;
     await buildBackup(pid,spot)}
@@ -83,31 +83,32 @@ async function castleFalls(a,d,ri){
     await banner(t('bFell',{d:pname(d)}),t('movedSub',{r:rn(D.castle)}),D.color,1500,d===0);
   }else{
     G.regions.forEach(x=>{if(x.owner===d)x.owner=a});D.alive=false;D.backup=-1;redrawAll();flashRegion(ri,G.players[a].color);
-    toast(t('fell',{a:pname(a),d:pname(d)}));setStatus(()=>[t('fell',{a:pname(a),d:pname(d)}),'']);await sleep(1600)}
+    toast(t('fell',{a:pname(a),d:pname(d)}));setStatus(()=>[t('fell',{a:pname(a),d:pname(d)}),'']);await sleep(TIMING.resultHold+800)}
 }
 
 async function attackTurn(pid){
   setActive(pid);if(pid!==0)showFact();
   if(G.phase==='war')await preTurn(pid);
   const tg=targetsFor(pid);
-  if(!tg.length){setStatus(()=>[t('noTarget',{p:pname(pid)}),'']);await sleep(900);return}
+  if(!tg.length){setStatus(()=>[t('noTarget',{p:pname(pid)}),'']);await sleep(tm('botChosen'));return}
   let ri;
   if(pid===0){setStatus(()=>[t('yourTurn'),t('attackHint')]);setHL(tg);focusOn(tg);
-    await banner(t('bYourTurn'),t('attackHint'),YOU_COLOR,1200,true);
+    await banner(t('bYourTurn'),t('attackHint'),YOU_COLOR,TIMING.bannerYou,true);
     ri=await waitRegionTap(tg);sfx('tap')}
-  else{setStatus(()=>[t('botTurn',{p:pname(pid)}),'']);setHL(tg);await sleep(500*pace());const P=G.players[pid];
+  else{setStatus(()=>[t('botTurn',{p:pname(pid)}),'']);setHL(tg);await sleep(tm('botThink'));const P=G.players[pid];
     /* saldırgan botlar kalelere ve değerli bölgelere, temkinliler zayıf savunmalara yönelir */
     ri=tg.map(i=>{const R=G.regions[i];const da=accOf(R.owner,R.cat);let s=accOf(pid,R.cat)-da*(1.1-P.agg*.6)+R.value/2000*(.5+P.agg)+Math.random()*.25;if(R.castle)s+=(3-R.towers)*.25-.55+P.agg*.4;return{i,s}}).sort((x,y)=>y.s-x.s)[0].i}
   const R=G.regions[ri],d=R.owner;
-  setHL([],ri);focusOn([ri],2);
+  /* harita sadece seni ilgilendiren hamlelerde yaklaşır; botlar arası hamlelerde sabit kalır */
+  setHL([],ri);if(pid===0||d===0)focusOn([ri],2);
   const tw=R.castle?' · '+t('towersLeft',{n:R.towers}):'';
   if(pid!==0){const youDef=d===0;
-    await banner(t('bBotTurn',{p:pname(pid)}),(youDef?t('bYouDefend',{r:rn(ri)}):t('bTarget',{r:rn(ri),d:pname(d)}))+tw,G.players[pid].color,youDef?1400:1000*pace(),youDef)}
-  else if(R.castle)await banner(t('bSiege',{d:pname(d)}),t('towersLeft',{n:R.towers}),YOU_COLOR,1000);
+    await banner(t('bBotTurn',{p:pname(pid)}),(youDef?t('bYouDefend',{r:rn(ri)}):t('bTarget',{r:rn(ri),d:pname(d)}))+tw,G.players[pid].color,youDef?TIMING.bannerYou+700:tm('botBanner'),youDef)}
+  else if(R.castle)await banner(t('bSiege',{d:pname(d)}),t('towersLeft',{n:R.towers}),YOU_COLOR,TIMING.banner);
   else await sleep(300);
   if(R.castle){
     while(R.towers>0){const o=await duel(pid,d,ri);hideCard();outcomeSfx(pid,d,o);
-      if(o==='att'){R.towers--;redrawAll();flashRegion(ri,G.players[pid].color);if(R.towers>0){toast(t('tower',{r:rn(ri),n:R.towers}));await sleep(900*Math.min(1,pace()))}}
+      if(o==='att'){R.towers--;redrawAll();flashRegion(ri,G.players[pid].color);if(R.towers>0){toast(t('tower',{r:rn(ri),n:R.towers}));await sleep(tm('towerPause'))}}
       else{if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:rn(ri)}))}else toast(t('none',{r:rn(ri)}));redrawAll();break}}
     if(R.towers===0)await castleFalls(pid,d,ri);
   }else{
@@ -116,7 +117,7 @@ async function attackTurn(pid){
     else if(o==='def'){R.value+=100;toast(t('held',{d:pname(d),r:rn(ri)}))}else toast(t('none',{r:rn(ri)}));
     redrawAll();
   }
-  clearHL();await sleep(800*pace());
+  await sleep(tm('resultHold')*.5);clearHL();await sleep(tm('afterTurn'));
 }
 
 async function prepareMap(){
@@ -130,14 +131,14 @@ async function run(){
   const my=++gameNo;
   await prepareMap();newGame();redrawAll();renderLegend();renderPhase();resetView();window.scrollTo({top:0});
   G.phase='expand';
-  while(freeR().length){G.round++;renderPhase();setActive(-1);setStatus(()=>[t('waitExpand'),'']);animateView({z:1,cx:W/2,cy:H/2});
-    await banner(t('bExpand',{n:G.round}),t('bExpandSub'),'',1000);
+  while(freeR().length){G.round++;renderPhase();setActive(-1);setStatus(()=>[t('bExpand',{n:G.round}),t('bExpandSub')]);
+    if(G.round===1)await banner(t('bExpand',{n:G.round}),t('bExpandSub'),'',TIMING.banner);else await sleep(900);
     const rk=await askEst(nextEst(MODE().event),alive(),t('est'),t('all'));hideCard();addGold(rk[0],GOLD.estWin,true);
     /* en yakın tahmin 2, ikinci 1 bölge; 4+ oyuncuda üçüncü de 1 bölge seçer */
     const picks=[[rk[0],2],[rk[1],1]];if(rk.length>=4)picks.push([rk[2],1]);
     for(const [pid,n] of picks)for(let k=0;k<n;k++){if(!freeR().length)break;await pickRegion(pid,n-k,k===0)}
   }
-  G.phase='war';const WAR=MODE().war;await banner(t('bWar'),t('bWarSub',{n:WAR}),'',1300);
+  G.phase='war';const WAR=MODE().war;animateView({z:1,cx:W/2,cy:H/2});await banner(t('bWar'),t('bWarSub',{n:WAR}),'',TIMING.banner+600);
   const NP=G.players.length;
   for(let rd=1;rd<=WAR;rd++){G.round=rd;renderPhase();const order=[...Array(NP).keys()].map(k=>(k+rd-1)%NP);
     for(const pid of order){if(!G.players[0].alive||alive().length<2)break;if(G.players[pid].alive)await attackTurn(pid)}

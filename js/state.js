@@ -4,9 +4,9 @@ const YOU_COLOR='#14B8A6';
 /* Oyun modları: war = savaş turu sayısı, event = bütün bölgeler bu özel kategoriden,
    pace = botların kendi aralarındaki düellolarda gösterim hızı (küçük = hızlı) */
 const MODES={
-  classic:{war:4,pace:1},
-  quick:{war:2,pace:.6},
-  football:{war:4,pace:.85,event:'fb'}
+  classic:{war:6,pace:1},
+  quick:{war:3,pace:.7},
+  football:{war:6,pace:1,event:'fb'}
 };
 /* Zorluk: botların doğru cevap ihtimaline eklenen değer */
 const DIFFS={easy:-.15,normal:0,hard:.12};
@@ -17,6 +17,12 @@ const GOLD={factBonus:10,start:40,ownCorrect:10,watchCorrect:15,estWin:10,captur
 let watchSpeed=1;try{const w=+localStorage.getItem('pusula.speed');if([1,2,4].includes(w))watchSpeed=w}catch(e){}
 function setWatchSpeed(v){watchSpeed=v;try{localStorage.setItem('pusula.speed',String(v))}catch(e){}if(typeof renderSpeed==='function')renderSpeed()}
 const pace=()=>MODE().pace/watchSpeed;
+/* Tempo (ms, 1x hızda). Bot hamleleri ve izleme süreleri pace() ile ölçeklenir (2x yarısı, 4x çeyreği);
+   senin kendi cevaplarının sonuç ekranı izleme hızından etkilenmez. Her sonuç ekranı dokunarak geçilebilir. */
+const TIMING={botThink:1800,botChosen:1100,botBanner:2100,afterTurn:1600,towerPause:1900,resultHold:2600,
+  specQuestion:2800,revealWatch:4200,revealWatchAns:5200,revealOwn:4200,
+  watchMC:13000,watchOrd:24000,watchEst:15000,banner:1800,bannerYou:1700};
+const tm=k=>TIMING[k]*pace();
 
 /* rakip botlar (2–4): renkleri birbirine ve sana çok benzemeyecek şekilde rastgele */
 const cdist=(a,b)=>{const x=hexRgb(a),y=hexRgb(b);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])};

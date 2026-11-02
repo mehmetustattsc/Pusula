@@ -1,11 +1,12 @@
 /* ===================== "Biliyor muydun?" =====================
  * Sen beklerken (botlar bölge seçerken, saldırıya hazırlanırken, kale onarırken) ekranın altında
- * kısa, niş bir bilgi kartı belirir. Sıra sana gelince kendiliğinden kaybolur.
+ * kısa, niş bir bilgi kartı belirir. Kart, sen kapatana ya da sıra sana gelene kadar kalır;
+ * soru kartları açıkken gizlenir, kapanınca geri gelir. Okunmadan yenisiyle değişmez.
  * Gördüğün bilgiler aynı oyunda kendi düellonda soru olarak gelebilir (%45 ihtimalle);
  * doğru bilirsen GOLD.factBonus altın bonus.
  * Haritaya özel bilgiler (m) o haritada öncelik alır; oyunlar arasında görülenler hatırlanır.
  */
-const FACT_GAP=6500;           // iki kart arasında en az bu kadar ms
+const FACT_GAP=16000;          // yeni kart, öncekini en erken bu kadar ms sonra değiştirir
 const FACT_ASK_CHANCE=.45;     // düelloda öğrenilen bilgiden soru gelme ihtimali
 const factQs=FACTS.map(f=>({type:'mc',id:f.id,c:f.c,m:f.m,q:f.q,a:f.a,fact:f}));
 let lastFact=-1e9,factSeen=[];
@@ -27,10 +28,13 @@ function showFact(){
   factSeen=factSeen.filter(x=>x!==f.id);factSeen.push(f.id);if(factSeen.length>300)factSeen=factSeen.slice(-300);
   try{localStorage.setItem('pusula.facts',JSON.stringify(factSeen))}catch(e){}
   factEl.innerHTML=`<div class="fk" style="--k:${CAT[f.c].c}"><div class="fh"><span class="dyk">${t('dyk')}</span>${chip(f.c)}<button class="fx" aria-label="×">×</button></div><p>${esc(T(f.f))}</p><div class="fs">${t('factNote')}</div></div>`;
-  factEl.hidden=false;factEl.classList.remove('in');void factEl.offsetWidth;factEl.classList.add('in');
-  factEl.querySelector('.fx').onclick=()=>{factEl.hidden=true};
+  factEl.hidden=false;factEl.classList.remove('in','mini');void factEl.offsetWidth;factEl.classList.add('in');
+  factEl.querySelector('.fx').onclick=e=>{e.stopPropagation();factEl.hidden=true};
+  factEl.querySelector('.fk').onclick=()=>{if(factEl.classList.contains('mini')){factEl.classList.remove('mini');sfx('tap')}};
 }
 function hideFact(){factEl.hidden=true}
+/* sıra sana gelince kart kaybolmaz, küçük bir etikete döner; dokununca yeniden açılır */
+function minimizeFact(){if(!factEl.hidden)factEl.classList.add('mini')}
 /* senin düellonda: bu oyunda gördüğün ama henüz sorulmamış bir bilgiden soru */
 function factQuestion(cat){
   const cand=factQs.filter(q=>q.c===cat&&G.facts.includes(q.id)&&!G.factAsked.includes(q.id));

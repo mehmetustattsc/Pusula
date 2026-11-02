@@ -32,20 +32,24 @@ function renderPhase(){$('#phase').textContent=!G||G.round===0?T(MAP?MAP.name:''
 let statusFn=()=>['',''];
 function setStatus(fn){statusFn=fn;renderStatus()}
 function renderStatus(){const [m,s]=statusFn();$('#sm').textContent=m;$('#ss').textContent=s||''}
-let toastT;function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2800)}
+/* kısa bildirimler sıraya girer: her biri en az TOAST_MS ekranda kalır, üst üste binmez */
+const TOAST_MS=3200;let toastQ=[],toastBusy=false;
+function toast(msg){if(toastQ.length>=3)toastQ.shift();toastQ.push(msg);if(!toastBusy)nextToast()}
+function nextToast(){const el=$('#toast');const m=toastQ.shift();if(m==null){toastBusy=false;el.classList.remove('on');return}
+  toastBusy=true;el.textContent=m;el.classList.add('on');setTimeout(()=>{el.classList.remove('on');setTimeout(nextToast,260)},AUTO?20:TOAST_MS)}
 
 /* ekranın ortasında beliren geçici duyuru: sıra kimde, ne oluyor */
 async function banner(main,sub='',color='',ms=1150,you=false){
   const b=$('#banner');b.innerHTML=`<div class="bn${you?' you':''}" style="${color?`--c:${color}`:''}"><div class="bm">${esc(main)}</div>${sub?`<div class="bs">${esc(sub)}</div>`:''}</div>`;
   b.hidden=false;b.classList.remove('go');void b.offsetWidth;b.classList.add('go');
-  if(you){sfx('turn');hideFact()}
+  if(you){sfx('turn');minimizeFact()}
   await sleep(ms);b.hidden=true;
 }
 
 /* overlay */
 const ov=$('#ov'),card=$('#card');let ovRerender=null;
-function showCard(html){card.innerHTML=html;ov.hidden=false}
-function hideCard(){ov.hidden=true;card.innerHTML='';ovRerender=null}
+function showCard(html){card.innerHTML=html;ov.hidden=false;document.body.classList.add('ovon')}
+function hideCard(){ov.hidden=true;card.innerHTML='';ovRerender=null;document.body.classList.remove('ovon')}
 function waitOrTap(ms){return new Promise(res=>{let done=false;const h=()=>fin();const fin=()=>{if(done)return;done=true;clearTimeout(tm);ov.removeEventListener('click',h);res()};const tm=setTimeout(fin,ms*SPEED);setTimeout(()=>{if(!done)ov.addEventListener('click',h)},300)})}
 function timer(ms,bar){let stop=false,t0=performance.now();const p=new Promise(res=>{function tick(n){if(stop)return;const f=Math.min(1,(n-t0)/ms);if(bar)bar.style.transform=`scaleX(${1-f})`;if(f>=1)return res('timeout');requestAnimationFrame(tick)}requestAnimationFrame(tick)});return{p,cancel(){stop=true},el(){return(performance.now()-t0)/1000}}}
 const chip=c=>`<span class="chip" style="--k:${CAT[c].c}">${T(CAT[c].n)}</span>`;
