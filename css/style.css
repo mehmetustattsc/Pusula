@@ -170,6 +170,8 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .oi.lock{border-style:dashed}
 .oi.ok{border-color:var(--good);background:#E3F8EC}.oi.ok .n{background:var(--good);color:#fff}
 .oi.no{border-color:var(--bad);background:#FFE6E6}.oi.no .n{background:var(--bad);color:#fff}
+.oi .ot{flex:1}.oi .mine{flex:none;font-size:.78rem;font-weight:800;color:var(--bad);background:#fff;border-radius:8px;padding:2px 7px}
+.ordh{font-weight:900;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--good);margin:2px 0 -2px}
 .row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 .ghost{background:transparent;border:2px solid var(--edge);border-radius:999px;padding:7px 14px;font-size:.85rem;font-weight:800;color:var(--ink2)}

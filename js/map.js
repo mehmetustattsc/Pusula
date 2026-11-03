@@ -85,13 +85,30 @@ function clearHL(){hlSet=new Set();focus=-1;renderHL();paint()}
 function flashRegion(i,color){if(reduced)return;flash={i,color,t0:performance.now()};kick()}
 function frame(now){paint(now);if(hlSet.size||focus>=0||(flash&&now-flash.t0<900))anim=requestAnimationFrame(frame);else{anim=0;flash=null;paint()}}
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* kale: üç kule (sol, orta, sağ) ve aradaki surlar. Kule yıkıldıkça önce sağ, sonra sol, en son orta kule
+   yıkık bir güdük ve moloz olarak çizilir. Orta kulede sahibinin kapısı ve bayrağı. */
+const TOWER_ORDER=[1,0,2]; // towers=n iken ayakta kalanlar: orta(1), sol(0), sağ(2) sırasıyla
+function towerShape(x0,x1,top,g,ruined,mh){
+  const w=x1-x0;ctx.beginPath();ctx.moveTo(x0,g);
+  if(!ruined){ctx.lineTo(x0,top);const seg=w/5;for(let k=0;k<5;k++){const a=x0+k*seg;if(k%2===0){ctx.lineTo(a,top-mh);ctx.lineTo(a+seg,top-mh);ctx.lineTo(a+seg,top)}else ctx.lineTo(a+seg,top)}}
+  else{const r=g-(g-top)*.42;ctx.lineTo(x0,r);ctx.lineTo(x0+w*.3,r-mh*.5);ctx.lineTo(x0+w*.5,r+mh*.6);ctx.lineTo(x0+w*.75,r+mh*.1);ctx.lineTo(x1,r+mh*.9)}
+  ctx.lineTo(x1,g);ctx.closePath();ctx.fillStyle=ruined?'#DCCDB0':'#FFF8EC';ctx.fill();ctx.stroke();
+  if(ruined){const r=g-(g-top)*.42;ctx.save();ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(x0+w*.5,r+mh*.9);ctx.lineTo(x0+w*.4,r+mh*2);ctx.lineTo(x0+w*.55,r+mh*2.8);ctx.stroke();ctx.restore()}
+}
 function drawCastle(x,y,s,col,towers){
-  ctx.save();ctx.translate(x,y);ctx.fillStyle='#FFF8EC';ctx.strokeStyle='#2B1748';ctx.lineWidth=3;
-  ctx.beginPath();const w=s,h=s*.62;ctx.moveTo(-w,h);ctx.lineTo(-w,-h);
-  const m=w*2/5;for(let k=0;k<5;k++){const x0=-w+k*m;if(k%2===0){ctx.lineTo(x0,-h-s*.32);ctx.lineTo(x0+m,-h-s*.32);ctx.lineTo(x0+m,-h)}else ctx.lineTo(x0+m,-h)}
-  ctx.lineTo(w,h);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-s*.25,h);ctx.lineTo(-s*.25,0);ctx.arc(0,0,s*.25,Math.PI,0);ctx.lineTo(s*.25,h);ctx.closePath();ctx.fill();
-  for(let k=0;k<3;k++){ctx.fillStyle=k<towers?'#FFC93C':'#8C7BA6';ctx.fillRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3);ctx.strokeRect(-s+k*s*.75+s*.1,h+7,s*.48,s*.3)}
+  ctx.save();ctx.translate(x,y);ctx.strokeStyle='#2B1748';ctx.lineWidth=2.6;ctx.lineJoin='round';
+  const g=s*.72,mh=s*.2,up=new Set(TOWER_ORDER.slice(0,towers));
+  const TW=[{x0:-s*1.15,x1:-s*.5,top:-s*.45},{x0:-s*.38,x1:s*.38,top:-s*.85},{x0:s*.5,x1:s*1.15,top:-s*.45}];
+  /* sur: kuleler arasında alçak duvar */
+  ctx.beginPath();ctx.rect(-s*.8,-s*.05,s*1.6,g+s*.05);ctx.fillStyle='#F1E4CB';ctx.fill();ctx.stroke();
+  [0,2,1].forEach(k=>towerShape(TW[k].x0,TW[k].x1,TW[k].top,g,!up.has(k),mh));
+  /* kapı */
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-s*.2,g);ctx.lineTo(-s*.2,g-s*.32);ctx.arc(0,g-s*.32,s*.2,Math.PI,0);ctx.lineTo(s*.2,g);ctx.closePath();ctx.fill();ctx.stroke();
+  /* ayakta kulelerde pencere, ortada bayrak */
+  TW.forEach((t,k)=>{if(!up.has(k))return;const cx=(t.x0+t.x1)/2;ctx.fillStyle='#2B1748';ctx.fillRect(cx-s*.06,t.top+s*.18,s*.12,s*.2)});
+  if(up.has(1)){const ty=TW[1].top-mh;ctx.beginPath();ctx.moveTo(0,ty);ctx.lineTo(0,ty-s*.48);ctx.stroke();ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,ty-s*.48);ctx.lineTo(s*.5,ty-s*.35);ctx.lineTo(0,ty-s*.2);ctx.closePath();ctx.fill();ctx.stroke()}
+  /* moloz */
+  TW.forEach((t,k)=>{if(up.has(k))return;ctx.fillStyle='#BFAE8E';ctx.lineWidth=1.5;const cx=(t.x0+t.x1)/2,o=k===0?-1:1;[[.42,.02,.1],[.62,.06,.08]].forEach(([ox,oy,r])=>{ctx.beginPath();ctx.arc(cx+o*ox*s,g-oy*s,r*s,0,Math.PI*2);ctx.fill();ctx.stroke()});ctx.lineWidth=2.6});
   ctx.restore();
 }
 function paint(now=performance.now()){
@@ -99,13 +116,13 @@ function paint(now=performance.now()){
   ctx.clearRect(0,0,W,H);ctx.drawImage(base,0,0);
   if(hlSet.size||focus>=0){ctx.drawImage(dim,0,0);ctx.globalAlpha=reduced?.35:.22+.16*(Math.sin(now/520)+1)/2;ctx.drawImage(hl,0,0);ctx.globalAlpha=1}
   if(!G)return;
-  if(flash){const p=(now-flash.t0)/900;if(p<1){const {cx,cy}=REGINFO[flash.i];ctx.beginPath();ctx.arc(cx,cy,30+p*110,0,Math.PI*2);ctx.strokeStyle=flash.color;ctx.globalAlpha=1-p;ctx.lineWidth=8*(1-p)+2;ctx.stroke();ctx.globalAlpha=1}}
+  if(flash){const p=Math.max(0,(now-flash.t0)/900);if(p<1){const {cx,cy}=REGINFO[flash.i];ctx.beginPath();ctx.arc(cx,cy,30+p*110,0,Math.PI*2);ctx.strokeStyle=flash.color;ctx.globalAlpha=1-p;ctx.lineWidth=8*(1-p)+2;ctx.stroke();ctx.globalAlpha=1}}
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
   G.regions.forEach((r,i)=>{const {cx,cy}=REGINFO[i];
     ctx.font='800 28px "Nunito",system-ui,sans-serif';ctx.lineWidth=7;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';
-    const nm=T(r.name);ctx.strokeText(nm,cx,cy-16);ctx.fillText(nm,cx,cy-16);
+    const nm=T(r.name),ny=r.castle?cy-24:cy-16;ctx.strokeText(nm,cx,ny);ctx.fillText(nm,cx,ny);
     const k=CAT[r.cat];
-    if(r.castle){drawCastle(cx+20,cy+20,17,r.owner>=0?G.players[r.owner].color:'#EBDDBC',r.towers);drawBadge(cx-20,cy+20,k)}
+    if(r.castle){drawCastle(cx+20,cy+22,22,r.owner>=0?G.players[r.owner].color:'#EBDDBC',r.towers);drawBadge(cx-28,cy+20,k)}
     else{if(G.players.some(p=>p.backup===i))drawFlag(cx+38,cy-4,G.players[r.owner].color);drawBadge(cx-24,cy+18,k);ctx.font='800 24px "Baloo 2","Nunito",system-ui,sans-serif';ctx.lineWidth=6;ctx.strokeStyle='rgba(43,23,72,.9)';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.strokeText(r.value,cx-6,cy+19);ctx.fillText(r.value,cx-6,cy+19);ctx.textAlign='center'}
   });
 }

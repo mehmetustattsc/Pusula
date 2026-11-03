@@ -85,7 +85,10 @@ async function askOrder(q,pids,ctxHtml){
     mine=seq.length===items.length&&seq.every((k,pos)=>items[k].i===pos);
     if(human)res[0]=mine;
   }else{const tmr=timer(tm('specQuestion')*SPEED,$('#tb'));await tmr.p}
-  card.querySelectorAll('.oi').forEach(b=>{const k=+b.dataset.k;b.disabled=true;b.querySelector('.n').textContent=items[k].i+1;b.classList.add('set');if(play&&seq.length)b.classList.add(seq.indexOf(k)===items[k].i?'ok':'no')});
+  /* cevap: öğeler doğru sıraya dizilir; senin yanlış yerleştirdiklerin kırmızı ve senin verdiğin sıra yanında */
+  const ordEl=card.querySelector('.ord'),oh=ordEl&&ordEl.previousElementSibling;if(oh&&oh.classList.contains('hint')&&!oh.classList.contains('ordh'))oh.remove();if(ordEl&&!ordEl.previousElementSibling.classList.contains('ordh'))ordEl.insertAdjacentHTML('beforebegin',`<div class="ordh">${t('rightOrder')}</div>`);
+  card.querySelectorAll('.oi').forEach(b=>{const k=+b.dataset.k,mp=seq.indexOf(k);b.disabled=true;b.style.order=items[k].i;b.querySelector('.n').textContent=items[k].i+1;b.classList.add('set');
+    if(play&&seq.length){const good=mp===items[k].i;b.classList.add(good?'ok':'no');if(!good)b.insertAdjacentHTML('beforeend',`<span class="mine">${mp>=0?t('yourPick',{n:mp+1}):'–'}</span>`)}});
   const r2=$('#octl');if(r2)r2.remove();
   if(human){record(q.c,res[0]);revealSfx(true,res[0]);if(res[0]&&pids.length>1)addGold(0,GOLD.ownCorrect,true)}
   if(pids.length>1)pids.filter(p=>p!==0&&res[p]).forEach(p=>addGold(p,GOLD.ownCorrect));
